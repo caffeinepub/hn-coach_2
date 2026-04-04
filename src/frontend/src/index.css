@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Figtree";
+  src: url("/assets/fonts/Figtree.woff2") format("woff2");
+  font-weight: 300 900;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+    /* HN Coach dark navy theme */
+    --background: 0.14 0.028 240;
+    --foreground: 1 0 0;
+    --card: 0.18 0.035 230;
+    --card-foreground: 1 0 0;
+    --popover: 0.18 0.035 230;
+    --popover-foreground: 1 0 0;
+    --primary: 0.68 0.21 47;
+    --primary-foreground: 1 0 0;
+    --secondary: 0.22 0.04 225;
+    --secondary-foreground: 1 0 0;
+    --muted: 0.22 0.04 225;
+    --muted-foreground: 0.67 0.04 220;
+    --accent: 0.68 0.21 47;
+    --accent-foreground: 1 0 0;
+    --destructive: 0.58 0.22 25;
+    --destructive-foreground: 1 0 0;
+    --border: 0.26 0.04 222;
+    --input: 0.26 0.04 222;
+    --ring: 0.68 0.21 47;
+    --chart-1: 0.68 0.21 47;
+    --chart-2: 0.6 0.12 185;
+    --chart-3: 0.4 0.07 227;
+    --chart-4: 0.83 0.19 84;
+    --chart-5: 0.77 0.19 70;
+    --sidebar: 0.16 0.032 235;
+    --sidebar-foreground: 1 0 0;
+    --sidebar-primary: 0.68 0.21 47;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.22 0.04 225;
+    --sidebar-accent-foreground: 1 0 0;
+    --sidebar-border: 0.26 0.04 222;
+    --sidebar-ring: 0.68 0.21 47;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body;
+    background: linear-gradient(
+      135deg,
+      oklch(0.13 0.03 242) 0%,
+      oklch(0.155 0.035 230) 100%
+    );
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .font-body {
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  }
+  .font-display {
+    font-family: "Figtree", system-ui, sans-serif;
+  }
+  .bg-navy-darkest {
+    background-color: #071824;
+  }
+  .bg-navy-dark {
+    background-color: #0b2232;
+  }
+  .bg-card-surface {
+    background-color: #112a3a;
+  }
+  .bg-card-inner {
+    background-color: #1a3a4f;
+  }
+  .border-navy {
+    border-color: #203b4d;
+  }
+  .text-muted-blue {
+    color: #a8b6c3;
+  }
+  .bg-orange {
+    background-color: #ff6a00;
+  }
+  .bg-orange-hover {
+    background-color: #e55a00;
+  }
+  .text-orange {
+    color: #ff6a00;
+  }
+  .border-orange {
+    border-color: #ff6a00;
+  }
+}
