@@ -1,6 +1,7 @@
 import { Navigate, useRouterState } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetCallerUserProfile } from "../hooks/useQueries";
 
@@ -37,14 +38,51 @@ function isProfileComplete(
   );
 }
 
+// Safety timeout: if loading takes longer than this, stop waiting and proceed
+const LOADING_TIMEOUT_MS = 8000;
+
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { identity, isInitializing } = useInternetIdentity();
-  const { data: profile, isLoading: profileLoading } =
-    useGetCallerUserProfile();
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    isError: profileError,
+    isFetched: profileFetched,
+  } = useGetCallerUserProfile();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
 
-  if (isInitializing || (identity && profileLoading)) {
+  // Safety net: if loading takes too long, stop spinning
+  const [timedOut, setTimedOut] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (
+      isInitializing ||
+      (identity && profileLoading && !profileFetched && !profileError)
+    ) {
+      timerRef.current = setTimeout(() => {
+        setTimedOut(true);
+      }, LOADING_TIMEOUT_MS);
+    } else {
+      setTimedOut(false);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [isInitializing, identity, profileLoading, profileFetched, profileError]);
+
+  // Still initializing auth AND haven't timed out
+  const isWaiting =
+    !timedOut &&
+    (isInitializing ||
+      (identity && profileLoading && !profileFetched && !profileError));
+
+  if (isWaiting) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
@@ -65,8 +103,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" />;
   }
 
-  // If profile is not complete and the user is not already on /profile, redirect them
-  if (!isProfileComplete(profile) && currentPath !== "/profile") {
+  // If profile failed to load (error) or is incomplete, send to /profile
+  // unless already there
+  if (
+    (profileError || !isProfileComplete(profile)) &&
+    currentPath !== "/profile"
+  ) {
     return <Navigate to="/profile" />;
   }
 

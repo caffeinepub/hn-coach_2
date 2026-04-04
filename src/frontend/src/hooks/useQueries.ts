@@ -12,16 +12,25 @@ export function useGetCallerUserProfile() {
     queryKey: ["currentUserProfile"],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not available");
-      return actor.getCallerUserProfile();
+      try {
+        return await actor.getCallerUserProfile();
+      } catch {
+        // If the call fails (e.g. user not yet registered), treat as no profile
+        return null;
+      }
     },
     enabled: !!actor && !actorFetching,
     retry: false,
+    // Don't treat null as an error
+    throwOnError: false,
   });
 
   return {
     ...query,
-    isLoading: actorFetching || query.isLoading,
+    isLoading: actorFetching || (query.isLoading && !query.isFetched),
     isFetched: !!actor && query.isFetched,
+    // Never expose errors since we handle them internally
+    isError: false,
   };
 }
 
@@ -388,7 +397,11 @@ export function useGetCallerPoints() {
     queryKey: ["callerPoints"],
     queryFn: async () => {
       if (!actor) return BigInt(0);
-      return (actor as any).getCallerPoints();
+      try {
+        return await (actor as any).getCallerPoints();
+      } catch {
+        return BigInt(0);
+      }
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 10000,
@@ -401,7 +414,11 @@ export function useGetCallerPointHistory() {
     queryKey: ["callerPointHistory"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getCallerPointHistory();
+      try {
+        return await (actor as any).getCallerPointHistory();
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 10000,
@@ -425,7 +442,15 @@ export function useGetCallerStreak() {
           nextMilestone: BigInt(7),
           daysToNext: BigInt(7),
         };
-      return (actor as any).getCallerStreak();
+      try {
+        return await (actor as any).getCallerStreak();
+      } catch {
+        return {
+          currentStreak: BigInt(0),
+          nextMilestone: BigInt(7),
+          daysToNext: BigInt(7),
+        };
+      }
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 30000,
