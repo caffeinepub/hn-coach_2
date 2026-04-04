@@ -2,6 +2,7 @@ import { Navigate, useRouterState } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetCallerUserProfile } from "../hooks/useQueries";
 
@@ -41,17 +42,17 @@ export function isProfileComplete(
 }
 
 // Safety timeout: if loading takes longer than this, stop waiting
-const LOADING_TIMEOUT_MS = 6000;
+const LOADING_TIMEOUT_MS = 10000;
 
 export function ProtectedRoute({
   children,
   isProfilePage = false,
 }: ProtectedRouteProps) {
   const { identity, isInitializing } = useInternetIdentity();
+  const { isFetching: actorFetching } = useActor();
   const {
     data: profile,
     isLoading: profileLoading,
-    isError: profileError,
     isFetched: profileFetched,
   } = useGetCallerUserProfile();
   const routerState = useRouterState();
@@ -60,12 +61,17 @@ export function ProtectedRoute({
   const [timedOut, setTimedOut] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    const isLoading =
-      isInitializing ||
-      (identity && profileLoading && !profileFetched && !profileError);
+  // We are still loading if:
+  // 1. Identity is initializing
+  // 2. Actor is being fetched
+  // 3. Profile query hasn't fetched yet (and we have an identity)
+  const stillLoading =
+    isInitializing ||
+    actorFetching ||
+    (!!identity && profileLoading && !profileFetched);
 
-    if (isLoading) {
+  useEffect(() => {
+    if (stillLoading) {
       if (!timerRef.current) {
         timerRef.current = setTimeout(() => {
           setTimedOut(true);
@@ -84,12 +90,9 @@ export function ProtectedRoute({
         timerRef.current = null;
       }
     };
-  }, [isInitializing, identity, profileLoading, profileFetched, profileError]);
+  }, [stillLoading]);
 
-  const isWaiting =
-    !timedOut &&
-    (isInitializing ||
-      (!!identity && profileLoading && !profileFetched && !profileError));
+  const isWaiting = !timedOut && stillLoading;
 
   if (isWaiting) {
     return (
@@ -118,9 +121,11 @@ export function ProtectedRoute({
     return <>{children}</>;
   }
 
-  // Other pages: if profile incomplete, send to /profile
+  // Other pages: only redirect to /profile once we've confirmed the profile
+  // is actually incomplete (i.e., fetch is complete and profile is null/incomplete)
   if (
-    (profileError || !isProfileComplete(profile)) &&
+    profileFetched &&
+    !isProfileComplete(profile) &&
     currentPath !== "/profile"
   ) {
     return <Navigate to="/profile" />;

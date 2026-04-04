@@ -14,7 +14,20 @@ declare global {
   }
 }
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Don't throw errors to the component tree by default
+      throwOnError: false,
+      // Reduce retries to avoid long loading loops
+      retry: 1,
+      retryDelay: 1000,
+    },
+    mutations: {
+      throwOnError: false,
+    },
+  },
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
