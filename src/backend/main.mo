@@ -8,12 +8,12 @@ import Principal "mo:core/Principal";
 import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Order "mo:core/Order";
-import Migration "migration";
+
 import MixinAuthorization "authorization/MixinAuthorization";
 import MixinStorage "blob-storage/Mixin";
 import AccessControl "authorization/access-control";
 
-(with migration = Migration.run)
+
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);

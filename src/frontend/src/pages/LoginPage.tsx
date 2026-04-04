@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Dumbbell, Loader2, Target, TrendingUp, Zap } from "lucide-react";
+import { CheckCircle, Dumbbell, Loader2, ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
@@ -47,54 +47,38 @@ export function LoginPage() {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-4xl font-display font-bold text-white leading-tight">
-              Transform Your
-              <br />
-              <span style={{ color: "#FF6A00" }}>Fitness Journey</span>
+              Get started
             </h1>
             <p className="mt-4 text-lg" style={{ color: "#A8B6C3" }}>
-              Personal coaching, scheduling, and real-time communication — all
-              in one place.
+              Create your account to begin your coaching journey
             </p>
           </motion.div>
 
           <div className="space-y-4">
             {[
-              {
-                icon: Zap,
-                title: "1-on-1 Coaching",
-                desc: "Direct messaging with your personal coach",
-              },
-              {
-                icon: Target,
-                title: "Goal Tracking",
-                desc: "Set targets and measure your progress",
-              },
-              {
-                icon: TrendingUp,
-                title: "Book Sessions",
-                desc: "Schedule 40-min Zoom calls with ease",
-              },
-            ].map((item, i) => (
+              "Secure, passwordless authentication",
+              "Personal coaching dashboard",
+              "Direct messaging with your coach",
+              "Easy appointment scheduling",
+            ].map((feature, i) => (
               <motion.div
-                key={item.title}
+                key={feature}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
-                className="flex items-start gap-4 p-4 rounded-xl"
+                className="flex items-center gap-4 p-4 rounded-xl"
                 style={{ background: "#112A3A" }}
               >
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: "rgba(255,106,0,0.15)" }}
                 >
-                  <item.icon className="w-5 h-5" style={{ color: "#FF6A00" }} />
+                  <CheckCircle
+                    className="w-5 h-5"
+                    style={{ color: "#FF6A00" }}
+                  />
                 </div>
-                <div>
-                  <p className="font-semibold text-white">{item.title}</p>
-                  <p className="text-sm mt-0.5" style={{ color: "#A8B6C3" }}>
-                    {item.desc}
-                  </p>
-                </div>
+                <p className="font-medium text-white">{feature}</p>
               </motion.div>
             ))}
           </div>
@@ -105,7 +89,7 @@ export function LoginPage() {
         </p>
       </div>
 
-      {/* Right panel - login form */}
+      {/* Right panel - sign in form */}
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -132,11 +116,31 @@ export function LoginPage() {
           >
             <div className="mb-8">
               <h2 className="text-2xl font-display font-bold text-white">
-                Welcome back
+                Get started
               </h2>
               <p className="mt-1 text-sm" style={{ color: "#A8B6C3" }}>
-                Sign in to access your coaching dashboard
+                Create your account to begin your coaching journey
               </p>
+            </div>
+
+            {/* Features - mobile only */}
+            <div className="space-y-3 mb-8 lg:hidden">
+              {[
+                "Secure, passwordless authentication",
+                "Personal coaching dashboard",
+                "Direct messaging with your coach",
+                "Easy appointment scheduling",
+              ].map((feature) => (
+                <div key={feature} className="flex items-center gap-3">
+                  <CheckCircle
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: "#FF6A00" }}
+                  />
+                  <span className="text-sm" style={{ color: "#A8B6C3" }}>
+                    {feature}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div className="space-y-4">
@@ -159,30 +163,37 @@ export function LoginPage() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-hnc-border" />
+                  <div
+                    className="w-full border-t"
+                    style={{ borderColor: "#1E3A4A" }}
+                  />
                 </div>
                 <div className="relative flex justify-center text-xs">
                   <span
-                    className="px-2 text-hnc-muted"
-                    style={{ background: "#112A3A" }}
+                    className="px-2"
+                    style={{ color: "#A8B6C3", background: "#112A3A" }}
                   >
-                    New to HN Coach?
+                    Are you a coach?
                   </span>
                 </div>
               </div>
 
-              <Link to="/signup">
+              <Link to="/admin">
                 <Button
                   variant="outline"
-                  className="w-full h-12 text-sm font-semibold rounded-xl"
+                  className="w-full h-12 text-sm font-semibold rounded-xl flex items-center gap-2"
                   style={{
-                    borderColor: "#FF6A00",
-                    color: "#FF6A00",
+                    borderColor: "#1E3A4A",
+                    color: "#A8B6C3",
                     background: "transparent",
                   }}
-                  data-ocid="login.signup.link"
+                  data-ocid="login.admin.link"
                 >
-                  Create Account
+                  <ShieldCheck
+                    className="w-4 h-4"
+                    style={{ color: "#FF6A00" }}
+                  />
+                  Access Admin Panel
                 </Button>
               </Link>
             </div>
