@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Clock,
   FileText,
-  Flame,
   History,
   Loader2,
   MessageCircle,
@@ -29,10 +28,8 @@ import { useActor } from "../hooks/useActor";
 import {
   useGetCallerPointHistory,
   useGetCallerPoints,
-  useGetCallerStreak,
   useGetMessageHistory,
   useMarkMessagesAsRead,
-  useRecordActivity,
   useSendMessageToCoach,
 } from "../hooks/useQueries";
 import { StorageClient } from "../utils/StorageClient";
@@ -293,134 +290,6 @@ function PointsSummaryCard() {
   );
 }
 
-const STREAK_MILESTONES = [
-  { days: 7, pts: 500 },
-  { days: 14, pts: 1000 },
-  { days: 21, pts: 1500 },
-  { days: 28, pts: 2000 },
-];
-
-function getMilestoneBonus(days: number): number {
-  for (const m of STREAK_MILESTONES) {
-    if (days <= m.days) return m.pts;
-  }
-  return STREAK_MILESTONES[STREAK_MILESTONES.length - 1].pts;
-}
-
-function StreakTrackerCard() {
-  const { data: streak, isLoading } = useGetCallerStreak();
-  const recordActivity = useRecordActivity();
-  const recordActivityRef = useRef(recordActivity.mutate);
-  recordActivityRef.current = recordActivity.mutate;
-
-  // Record activity on mount (fire-and-forget)
-  useEffect(() => {
-    try {
-      recordActivityRef.current();
-    } catch {
-      // silently ignore
-    }
-  }, []);
-
-  const currentStreak = Number(streak?.currentStreak ?? BigInt(0));
-  const nextMilestone = Number(streak?.nextMilestone ?? BigInt(7));
-  const daysToNext = Number(streak?.daysToNext ?? BigInt(7));
-  const milestoneBonus = getMilestoneBonus(nextMilestone);
-
-  const progressPct = Math.min(
-    100,
-    nextMilestone > 0 ? (currentStreak / nextMilestone) * 100 : 100,
-  );
-
-  const milestoneReached = daysToNext === 0;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: 0.05 }}
-      className="rounded-xl px-4 py-3 mb-3"
-      style={{
-        background: "#112A3A",
-        border: "1px solid #203B4D",
-      }}
-      data-ocid="chat.streak.card"
-    >
-      {isLoading ? (
-        <div className="flex items-center gap-2">
-          <Loader2
-            className="w-4 h-4 animate-spin"
-            style={{ color: "#FF6A00" }}
-          />
-          <span className="text-xs" style={{ color: "#A8B6C3" }}>
-            Loading streak...
-          </span>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {/* Header row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4" style={{ color: "#FF6A00" }} />
-              <span className="text-sm font-bold text-white">
-                🔥{" "}
-                {currentStreak === 1
-                  ? "1 Day Streak"
-                  : `${currentStreak} Day Streak`}
-              </span>
-            </div>
-            <span
-              className="text-xs font-medium px-2 py-0.5 rounded-full"
-              style={{
-                background: "rgba(255,106,0,0.12)",
-                border: "1px solid rgba(255,106,0,0.25)",
-                color: "#FFA560",
-              }}
-            >
-              Next: {nextMilestone} days → +{milestoneBonus.toLocaleString()}{" "}
-              pts
-            </span>
-          </div>
-
-          {/* Progress bar */}
-          <div
-            className="h-2 rounded-full overflow-hidden w-full"
-            style={{ background: "#0D2030" }}
-          >
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="h-full rounded-full"
-              style={{ background: "#FF6A00" }}
-            />
-          </div>
-
-          {/* Status text */}
-          <p className="text-xs" style={{ color: "#A8B6C3" }}>
-            {milestoneReached ? (
-              <span style={{ color: "#FF6A00" }}>
-                🎉 Milestone reached! Keep it up!
-              </span>
-            ) : (
-              <>
-                <span style={{ color: "#FFA560" }}>
-                  {daysToNext} days to go
-                </span>{" "}
-                for a{" "}
-                <span style={{ color: "#FF6A00" }} className="font-semibold">
-                  +{milestoneBonus.toLocaleString()} pts
-                </span>{" "}
-                streak bonus
-              </>
-            )}
-          </p>
-        </div>
-      )}
-    </motion.div>
-  );
-}
-
 const STREAK_TIERS = [
   { days: 7, pts: 500 },
   { days: 14, pts: 1000 },
@@ -429,9 +298,13 @@ const STREAK_TIERS = [
 ];
 
 const IMAGE_BONUSES = [
-  { label: "Before Image", pts: 250 },
-  { label: "After Image", pts: 250 },
+  { label: "Weight Image", pts: 20 },
+  { label: "Footsteps", pts: 30 },
+  { label: "Meal Image", pts: 60 },
+  { label: "Weekly Measurements", pts: 100 },
 ];
+
+const IMAGE_BONUS_EMOJIS = ["⚖️", "👟", "🍽️", "📏"];
 
 function BonusPointsGuide() {
   const [open, setOpen] = useState(true);
@@ -484,7 +357,7 @@ function BonusPointsGuide() {
               {/* Streak bonuses */}
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Flame className="w-3.5 h-3.5" style={{ color: "#FF6A00" }} />
+                  <span className="text-sm">🔥</span>
                   <span
                     className="text-xs font-semibold uppercase tracking-wider"
                     style={{ color: "#FF6A00" }}
@@ -559,7 +432,7 @@ function BonusPointsGuide() {
                       data-ocid={`chat.image_bonus.item.${i + 1}`}
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className="text-sm">{i === 0 ? "📸" : "🖼️"}</span>
+                        <span className="text-sm">{IMAGE_BONUS_EMOJIS[i]}</span>
                         <span className="text-xs font-medium text-white">
                           {bonus.label}
                         </span>
@@ -579,8 +452,8 @@ function BonusPointsGuide() {
                   className="text-xs mt-2 leading-relaxed"
                   style={{ color: "#A8B6C3" }}
                 >
-                  Share your before &amp; after progress photos with your coach
-                  to earn bonus points and track your transformation! 💪
+                  Share your progress images with your coach to earn bonus
+                  points and track your transformation! 💪
                 </p>
               </div>
             </div>
@@ -781,9 +654,6 @@ export function ChatPage() {
 
             {/* Points summary card */}
             <PointsSummaryCard />
-
-            {/* Streak tracker card */}
-            <StreakTrackerCard />
 
             {/* Bonus points guide */}
             <BonusPointsGuide />
