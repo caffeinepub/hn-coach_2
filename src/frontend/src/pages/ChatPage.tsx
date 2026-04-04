@@ -1,23 +1,28 @@
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import {
+  Clock,
   FileText,
   Loader2,
   MessageCircle,
   Paperclip,
   Send,
+  Trophy,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MessageType, SenderRole } from "../backend";
+import { MessageType, PointReason, SenderRole } from "../backend";
 import { Footer } from "../components/Footer";
 import { NavBar } from "../components/NavBar";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { loadConfig } from "../config";
 import { useActor } from "../hooks/useActor";
 import {
+  useGetCallerPointHistory,
+  useGetCallerPoints,
   useGetMessageHistory,
+  useMarkMessagesAsRead,
   useSendMessageToCoach,
 } from "../hooks/useQueries";
 import { StorageClient } from "../utils/StorageClient";
@@ -94,9 +99,114 @@ function ImageMessage({
   );
 }
 
+function PointsSummaryCard() {
+  const { data: totalPoints, isLoading: pointsLoading } = useGetCallerPoints();
+  const { data: history, isLoading: historyLoading } =
+    useGetCallerPointHistory();
+
+  const total = Number(totalPoints ?? BigInt(0));
+  const isLoading = pointsLoading || historyLoading;
+
+  // Count each category from history
+  const weightCount =
+    history?.filter((r) => r.reason === PointReason.weightImage).length ?? 0;
+  const footstepsCount =
+    history?.filter((r) => r.reason === PointReason.footsteps).length ?? 0;
+  const dailyCount =
+    history?.filter((r) => r.reason === PointReason.dailyBonus).length ?? 0;
+
+  const hasHistory = (history?.length ?? 0) > 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="rounded-xl px-4 py-3 mb-5"
+      style={{
+        background: "#112A3A",
+        border: "1px solid #203B4D",
+      }}
+      data-ocid="chat.points.card"
+    >
+      {isLoading ? (
+        <div className="flex items-center gap-2">
+          <Loader2
+            className="w-4 h-4 animate-spin"
+            style={{ color: "#FF6A00" }}
+          />
+          <span className="text-xs" style={{ color: "#A8B6C3" }}>
+            Loading points...
+          </span>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {/* Total */}
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4" style={{ color: "#FF6A00" }} />
+            <span className="text-sm font-semibold text-white">
+              Your Points:
+            </span>
+            <span className="text-base font-bold" style={{ color: "#FF6A00" }}>
+              {total} pts
+            </span>
+          </div>
+
+          {/* Breakdown */}
+          {hasHistory ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {weightCount > 0 && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(255,106,0,0.1)",
+                    border: "1px solid rgba(255,106,0,0.2)",
+                    color: "#FFA560",
+                  }}
+                >
+                  🏋️ Weight ×{weightCount}
+                </span>
+              )}
+              {footstepsCount > 0 && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(255,106,0,0.1)",
+                    border: "1px solid rgba(255,106,0,0.2)",
+                    color: "#FFA560",
+                  }}
+                >
+                  👣 Footsteps ×{footstepsCount}
+                </span>
+              )}
+              {dailyCount > 0 && (
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: "rgba(255,106,0,0.1)",
+                    border: "1px solid rgba(255,106,0,0.2)",
+                    color: "#FFA560",
+                  }}
+                >
+                  ⭐ Daily ×{dailyCount}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs" style={{ color: "#A8B6C3" }}>
+              Earn points by sharing progress with your coach!
+            </span>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 export function ChatPage() {
   const { data: messages, isLoading } = useGetMessageHistory();
   const sendMessage = useSendMessageToCoach();
+  const markAsRead = useMarkMessagesAsRead();
   const { actor, isFetching } = useActor();
   const [input, setInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -106,6 +216,9 @@ export function ChatPage() {
   const [storageClient, setStorageClient] = useState<StorageClient | null>(
     null,
   );
+  const hasMarkedRef = useRef(false);
+  const markAsReadRef = useRef(markAsRead.mutate);
+  markAsReadRef.current = markAsRead.mutate;
 
   useEffect(() => {
     if (!actor || isFetching) return;
@@ -126,6 +239,14 @@ export function ChatPage() {
       });
     });
   }, [actor, isFetching]);
+
+  // Mark messages as read once when messages first load
+  useEffect(() => {
+    if (messages && messages.length > 0 && !hasMarkedRef.current) {
+      hasMarkedRef.current = true;
+      markAsReadRef.current();
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -244,7 +365,7 @@ export function ChatPage() {
             className="flex-1 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-5">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ background: "rgba(255,106,0,0.15)" }}
@@ -270,6 +391,9 @@ export function ChatPage() {
               </div>
             </div>
 
+            {/* Points summary card */}
+            <PointsSummaryCard />
+
             {/* Chat container */}
             <div
               className="flex-1 flex flex-col rounded-2xl border border-hnc-border shadow-card overflow-hidden"
@@ -279,7 +403,7 @@ export function ChatPage() {
               <div
                 ref={scrollRef}
                 className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
-                style={{ maxHeight: "calc(100vh - 340px)" }}
+                style={{ maxHeight: "calc(100vh - 380px)" }}
                 data-ocid="chat.panel"
               >
                 {isLoading ? (
@@ -386,6 +510,26 @@ export function ChatPage() {
                     ))}
                   </AnimatePresence>
                 )}
+              </div>
+
+              {/* Response time notice banner */}
+              <div
+                className="mx-3 mb-2 mt-1 flex items-center gap-2 px-3 py-2 rounded-xl"
+                style={{
+                  background: "rgba(255, 106, 0, 0.08)",
+                  border: "1px solid rgba(255, 106, 0, 0.22)",
+                }}
+              >
+                <Clock
+                  className="w-3.5 h-3.5 flex-shrink-0"
+                  style={{ color: "#FF8C38" }}
+                />
+                <p className="text-xs font-medium" style={{ color: "#FF8C38" }}>
+                  We will respond shortly{" "}
+                  <span style={{ color: "#FFA560" }}>
+                    (Morning 8am to 11:59pm)
+                  </span>
+                </p>
               </div>
 
               {/* Input area */}

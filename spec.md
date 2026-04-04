@@ -1,59 +1,53 @@
-# HN Coach — Admin Panel + File Sharing
+# HN Coach - Points System
 
 ## Current State
-- 6-page app: Login, Signup, Home, Profile, Chat, Book Appointment
-- Dark navy + orange theme (#0B2232 background, #FF6A00 accent)
-- Backend: Motoko with UserProfile, Message (text only), Booking, Authorization (role-based)
-- Chat: user sends text to coach, polls every 5s, coach replies via admin
-- Blob-storage component already included for avatar uploads
-- Backend already has `sendMessageToUser`, `getUserMessageHistory`, `getAllProfiles`, `getAllBookingsForDate`, admin checks via AccessControl
+- Admin panel has Messages tab (with user list + conversation panel) and Bookings tab
+- Users can chat with coach via ChatPage
+- Backend has user profiles, messaging, bookings, and read receipt tracking
+- No points system exists
 
 ## Requested Changes (Diff)
 
 ### Add
-- Coach Admin Panel (`/admin` route) — password-protected with hardcoded password "hncoach2024" (localStorage session)
-  - List all users who have messaged (show name/principal from profile if available)
-  - Select a user to open their conversation thread
-  - Reply to selected user's messages (calls `sendMessageToUser`)
-  - View all bookings section — list all bookings with user info, date/time, status; allow cancel/reschedule
-  - Cancel booking from admin panel (calls `cancelBooking` on behalf — or new admin cancel endpoint)
-- File/image sharing in Chat (both user and coach sides)
-  - User can attach image or PDF in chat — upload via blob-storage, send message with blobId reference
-  - Coach sees file messages in admin panel — images display inline, PDFs as clickable links
-  - Message type extended: `messageType` field (#text, #image, #file), `blobId` optional field
-- Admin panel shows file attachments inline in conversation view
+- **Backend**: Points store per user (Map<Principal, Nat>)
+- **Backend**: `givePoints(user, points, reason)` - admin gives arbitrary points to a user
+- **Backend**: `getUserPoints(user)` - returns total points for a given user (no auth, called by admin or from user chat)
+- **Backend**: `getCallerPoints()` - returns the authenticated caller's own points (user-facing)
+- **Backend**: Three special point award functions (or handled via `givePoints` with reason enum):
+  - Weight image upload reward: 20 pts
+  - Footsteps: 30 pts
+  - Daily Bonus: 50 pts
+- **Admin Panel - ConversationPanel**: Below the user header in the conversation panel, add a "Give Points" section with three preset buttons:
+  - Weight Image (20 pts)
+  - Footsteps (30 pts)
+  - Daily Bonus (50 pts)
+  - Plus a manual input for custom points with a "Give" button
+  - Show current total points for selected user in this section
+- **ChatPage (user-facing)**: Display a points summary card/badge in the chat header area showing:
+  - Total points count prominently
+  - Breakdown: Weight Images earned, Footsteps earned, Daily Bonuses earned (via point history)
+  - Styled with the existing dark navy/orange theme
 
 ### Modify
-- Backend `Message` type: add optional `blobId: ?Text` and `messageType: MessageType` (#text | #image | #file)
-- `sendMessageToCoach` accepts optional blobId and messageType
-- `sendMessageToUser` accepts optional blobId and messageType
-- Backend: add `getAllUsers` query for admin to list principals who have messages
-- Backend: add `adminCancelBooking` that allows admin to cancel any booking by id
-- Backend: add `getAllBookings` for admin to get all bookings across all users
-- ChatPage: add file attachment button (image + PDF), upload to blob storage, show file previews in message bubbles
-- App.tsx: add `/admin` route
+- **Backend**: Add points-related types and storage
+- **AdminPage**: `ConversationPanel` - add points award UI below the conversation header
+- **ChatPage**: Add points display widget in the header or sidebar of the chat view
+- **useQueries.ts**: Add hooks for `givePoints`, `getUserPoints`, `getCallerPoints`
 
 ### Remove
 - Nothing removed
 
 ## Implementation Plan
-1. Update Motoko backend:
-   - Add `MessageType` variant (#text | #image | #file)
-   - Add optional `blobId` field to `Message`
-   - Update `sendMessageToCoach` and `sendMessageToUser` to accept blobId + messageType
-   - Add `getAllUsers` (admin only) — returns all principals with message history
-   - Add `getAllBookings` (admin only) — returns all bookings
-   - Add `adminCancelBooking(bookingId: Nat)` (admin only)
-2. Frontend:
-   - Add `AdminPage.tsx` with password gate ("hncoach2024" in localStorage)
-     - Users list panel on left
-     - Conversation view on right for selected user
-     - Reply input at bottom
-     - Bookings tab: table of all bookings with cancel action
-   - Update `ChatPage.tsx`:
-     - Add paperclip/attach button next to send
-     - File picker accepts image/* and application/pdf
-     - Upload file to blob-storage, get blobId, send message with blobId + type
-     - Render image messages as inline img, PDF messages as file link
-   - Update `useQueries.ts` with new hooks
-   - Update `App.tsx` to add `/admin` route (no ProtectedRoute — uses password gate)
+1. Add `PointRecord` type with fields: `points: Nat`, `reason: PointReason`, `timestamp: Int`
+2. Add `PointReason` variant: `#weightImage`, `#footsteps`, `#dailyBonus`, `#custom`
+3. Add `pointsStore: Map<Principal, List<PointRecord>>` to backend
+4. Add `givePoints(user: Principal, points: Nat, reason: PointReason)` - no auth (admin protected by frontend password)
+5. Add `getUserPoints(user: Principal): Nat` - sums all point records for the user
+6. Add `getCallerPoints(): Nat` - user-facing, returns caller's total
+7. Add `getCallerPointHistory(): [PointRecord]` - user-facing, returns full history for display
+8. In admin ConversationPanel, add a points panel above/beside chat with:
+   - Current total display
+   - 3 preset buttons (Weight Image 20, Footsteps 30, Daily Bonus 50)
+   - Custom points input
+9. In ChatPage, add a points card in the header showing total and category breakdown
+10. Add useQueries hooks: `useGivePoints`, `useGetUserPoints`, `useGetCallerPoints`, `useGetCallerPointHistory`

@@ -1,6 +1,7 @@
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Booking, Message, UserProfile } from "../backend";
+import type { Booking, Message, PointRecord, UserProfile } from "../backend";
+import { PointReason } from "../backend";
 import type { MessageType } from "../backend";
 import { useActor } from "./useActor";
 
@@ -31,7 +32,7 @@ export function useSaveUserProfile() {
   return useMutation({
     mutationFn: async (profile: UserProfile) => {
       if (!actor) throw new Error("Actor not available");
-      await actor.saveUserProfile(profile);
+      await actor.saveCallerUserProfile(profile);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
@@ -137,7 +138,7 @@ export function useCancelBooking() {
   });
 }
 
-// ─── Admin Hooks ────────────────────────────────────────────────────────────
+// Admin Hooks
 
 export function useGetAllUsers() {
   const { actor, isFetching: actorFetching } = useActor();
@@ -234,3 +235,94 @@ export function useAdminCancelBooking() {
     },
   });
 }
+
+// Read Receipt Hooks
+
+export function useMarkMessagesAsRead() {
+  const { actor } = useActor();
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Actor not available");
+      // markMessagesAsRead exists in Candid service but not in typed wrapper
+      await (actor as any).markMessagesAsRead();
+    },
+  });
+}
+
+export function useGetLastReadTimestamp(user: Principal | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+  return useQuery<bigint | null>({
+    queryKey: ["lastReadTimestamp", user?.toString()],
+    queryFn: async () => {
+      if (!actor || !user) return null;
+      // getLastReadTimestamp exists in Candid service
+      const result = await (actor as any).getLastReadTimestamp(user);
+      // Candid optional: [] = null, [value] = value
+      return result.length > 0 ? result[0] : null;
+    },
+    enabled: !!actor && !actorFetching && !!user,
+    refetchInterval: 5000,
+  });
+}
+
+// Points Hooks
+
+export function useGivePoints() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      user,
+      points,
+      reason,
+    }: { user: Principal; points: bigint; reason: PointReason }) => {
+      if (!actor) throw new Error("Actor not available");
+      return (actor as any).givePoints(user, points, reason);
+    },
+    onSuccess: (_data: any, variables: any) => {
+      queryClient.invalidateQueries({
+        queryKey: ["userPoints", variables.user.toString()],
+      });
+    },
+  });
+}
+
+export function useGetUserPoints(user: Principal | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+  return useQuery<bigint>({
+    queryKey: ["userPoints", user?.toString()],
+    queryFn: async () => {
+      if (!actor || !user) return BigInt(0);
+      return (actor as any).getUserPoints(user);
+    },
+    enabled: !!actor && !actorFetching && !!user,
+  });
+}
+
+export function useGetCallerPoints() {
+  const { actor, isFetching: actorFetching } = useActor();
+  return useQuery<bigint>({
+    queryKey: ["callerPoints"],
+    queryFn: async () => {
+      if (!actor) return BigInt(0);
+      return (actor as any).getCallerPoints();
+    },
+    enabled: !!actor && !actorFetching,
+    refetchInterval: 10000,
+  });
+}
+
+export function useGetCallerPointHistory() {
+  const { actor, isFetching: actorFetching } = useActor();
+  return useQuery<PointRecord[]>({
+    queryKey: ["callerPointHistory"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).getCallerPointHistory();
+    },
+    enabled: !!actor && !actorFetching,
+    refetchInterval: 10000,
+  });
+}
+
+export { PointReason };

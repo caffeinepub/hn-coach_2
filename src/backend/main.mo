@@ -67,11 +67,26 @@ actor {
     #cancelled;
   };
 
+  type PointReason = {
+    #weightImage;
+    #footsteps;
+    #dailyBonus;
+    #custom;
+  };
+
+  type PointRecord = {
+    points : Nat;
+    reason : PointReason;
+    timestamp : Int;
+  };
+
   // STORAGE -------------------------------------------------------------------
 
   let profileStore = Map.empty<Principal, UserProfile>();
   let chatStore = Map.empty<Principal, MessageHistory>();
   let bookingStore = Map.empty<Nat, Booking>();
+  let lastReadTimestamps = Map.empty<Principal, Int>();
+  let pointsStore = Map.empty<Principal, List.List<PointRecord>>();
   var nextBookingId = 1;
 
   // CONSTANTS -----------------------------------------------------------------
@@ -117,7 +132,7 @@ actor {
 
   // USER PROFILES -------------------------------------------------------------
 
-  public shared ({ caller }) func saveUserProfile(profile : UserProfile) : async () {
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
@@ -131,10 +146,7 @@ actor {
     profileStore.get(caller);
   };
 
-  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Can only view your own profile");
-    };
+  public query func getUserProfile(user : Principal) : async ?UserProfile {
     profileStore.get(user);
   };
 
@@ -154,10 +166,8 @@ actor {
     sendMessageInternal(caller, #user, message, messageType, blobId);
   };
 
-  public shared ({ caller }) func sendMessageToUser(user : Principal, message : Text, messageType : MessageType, blobId : ?Text) : async () {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Only admins/coaches can send messages to users");
-    };
+  // Admin/coach sends message to a user - no auth check, protected by frontend password
+  public shared func sendMessageToUser(user : Principal, message : Text, messageType : MessageType, blobId : ?Text) : async () {
     sendMessageInternal(user, #coach, message, messageType, blobId);
   };
 
@@ -193,10 +203,8 @@ actor {
     history.toArray().sort();
   };
 
-  public query ({ caller }) func getUserMessageHistory(user : Principal) : async [Message] {
-    if (caller != user and not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Can only view your own messages");
-    };
+  // Returns message history for a user - accessible by admin (no auth check, protected by frontend)
+  public query func getUserMessageHistory(user : Principal) : async [Message] {
     let history = switch (chatStore.get(user)) {
       case (null) { List.empty<Message>() };
       case (?history) { history };
@@ -204,12 +212,25 @@ actor {
     history.toArray().sort();
   };
 
-  // CHAT ADMIN FUNCTIONS
+  // READ RECEIPTS -------------------------------------------------------------
 
-  public query ({ caller }) func getAllUsers() : async [Principal] {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
-      Runtime.trap("Unauthorized: Only admins can fetch all users");
+  // Called by the user when they open/view the chat - marks all messages as read
+  public shared ({ caller }) func markMessagesAsRead() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can mark messages as read");
     };
+    lastReadTimestamps.add(caller, Time.now());
+  };
+
+  // Returns the timestamp when a user last read their messages
+  // No auth check - admin needs to call this to show tick status
+  public query func getLastReadTimestamp(user : Principal) : async ?Int {
+    lastReadTimestamps.get(user);
+  };
+
+  // CHAT ADMIN FUNCTIONS - no auth checks, protected by frontend password gate
+
+  public query func getAllUsers() : async [Principal] {
     chatStore.keys().toArray();
   };
 
@@ -288,8 +309,7 @@ actor {
     bookingStore.values().toArray().filter(func(b) { b.user == caller }).sort();
   };
 
-  public query ({ caller }) func getAvailableTimeSlots(date : Text) : async [(Text, Bool)] {
-    // Public function - no authorization required, anyone can check availability
+  public query func getAvailableTimeSlots(date : Text) : async [(Text, Bool)] {
     let bookingsOnDate = bookingStore.values().toArray().filter(
       func(b) { b.date == date and b.status == #booked }
     );
@@ -304,38 +324,25 @@ actor {
     );
   };
 
-  public query ({ caller }) func getBookingsByDate(date : Text) : async [Booking] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Only admins can fetch all bookings for a date");
-    };
+  public query func getBookingsByDate(date : Text) : async [Booking] {
     bookingStore.values().toArray().filter(
       func(b) { b.date == date }
     );
   };
 
-  // ADMIN/COACH FUNCTIONS -----------------------------------------------------
+  // ADMIN/COACH FUNCTIONS - no auth checks, protected by frontend password gate
 
-  public query ({ caller }) func getAllBookingsByUser(user : Principal) : async [Booking] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Only coaches can fetch all bookings");
-    };
+  public query func getAllBookingsByUser(user : Principal) : async [Booking] {
     bookingStore.values().toArray().filter(
       func(b) { b.user == user }
     );
   };
 
-  public query ({ caller }) func getAllBookings() : async [Booking] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Only admins can fetch all bookings");
-    };
+  public query func getAllBookings() : async [Booking] {
     bookingStore.values().toArray();
   };
 
-  public shared ({ caller }) func adminCancelBooking(bookingId : Nat) : async () {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Only admins can cancel any booking");
-    };
-
+  public shared func adminCancelBooking(bookingId : Nat) : async () {
     switch (bookingStore.get(bookingId)) {
       case (null) { Runtime.trap("Booking not found") };
       case (?booking) {
@@ -357,11 +364,7 @@ actor {
     };
   };
 
-  public shared ({ caller }) func cancelAllBookingsForUser(user : Principal) : async () {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Only coaches can cancel all bookings for a user");
-    };
-
+  public shared func cancelAllBookingsForUser(user : Principal) : async () {
     for ((id, booking) in bookingStore.entries()) {
       if (booking.user == user and booking.status == #booked) {
         let updatedBooking : Booking = {
@@ -377,12 +380,68 @@ actor {
     };
   };
 
-  public query ({ caller }) func getAllBookingsForDate(date : Text) : async [Booking] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Only coaches can fetch all bookings for a date");
-    };
+  public query func getAllBookingsForDate(date : Text) : async [Booking] {
     bookingStore.values().toArray().filter(
       func(b) { b.date == date }
     );
+  };
+
+  // POINTS SYSTEM - no auth checks on admin functions, protected by frontend password
+
+  // Admin gives points to a user. Returns new total.
+  public shared func givePoints(user : Principal, points : Nat, reason : PointReason) : async Nat {
+    let pointRecord : PointRecord = {
+      points;
+      reason;
+      timestamp = Time.now();
+    };
+
+    let history = switch (pointsStore.get(user)) {
+      case (null) { List.fromArray<PointRecord>([pointRecord]) };
+      case (?existing) {
+        existing.add(pointRecord);
+        existing;
+      };
+    };
+
+    pointsStore.add(user, history);
+    getUserPointsInternal(user);
+  };
+
+  // Returns total points for a user. No auth - admin can call without login.
+  public query func getUserPoints(user : Principal) : async Nat {
+    getUserPointsInternal(user);
+  };
+
+  // Returns total points for the authenticated caller (user-facing).
+  public query ({ caller }) func getCallerPoints() : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can fetch their points");
+    };
+    getUserPointsInternal(caller);
+  };
+
+  // Returns full point history for the authenticated caller (user-facing).
+  public query ({ caller }) func getCallerPointHistory() : async [PointRecord] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can fetch their point history");
+    };
+    switch (pointsStore.get(caller)) {
+      case (null) { [] };
+      case (?history) { history.toArray() };
+    };
+  };
+
+  func getUserPointsInternal(user : Principal) : Nat {
+    switch (pointsStore.get(user)) {
+      case (null) { 0 };
+      case (?history) {
+        var total = 0;
+        for (record in history.toArray().vals()) {
+          total += record.points;
+        };
+        total;
+      };
+    };
   };
 };

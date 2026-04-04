@@ -30,6 +30,15 @@ export interface Message {
 export type MessageType = { 'file' : null } |
   { 'text' : null } |
   { 'image' : null };
+export type PointReason = { 'custom' : null } |
+  { 'dailyBonus' : null } |
+  { 'footsteps' : null } |
+  { 'weightImage' : null };
+export interface PointRecord {
+  'timestamp' : bigint,
+  'points' : bigint,
+  'reason' : PointReason,
+}
 export type SenderRole = { 'coach' : null } |
   { 'user' : null };
 export interface UserProfile {
@@ -85,14 +94,20 @@ export interface _SERVICE {
   'getAllUsers' : ActorMethod<[], Array<Principal>>,
   'getAvailableTimeSlots' : ActorMethod<[string], Array<[string, boolean]>>,
   'getBookingsByDate' : ActorMethod<[string], Array<Booking>>,
+  'getCallerPointHistory' : ActorMethod<[], Array<PointRecord>>,
+  'getCallerPoints' : ActorMethod<[], bigint>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getLastReadTimestamp' : ActorMethod<[Principal], [] | [bigint]>,
   'getMessageHistory' : ActorMethod<[], Array<Message>>,
   'getUserBookings' : ActorMethod<[], Array<Booking>>,
   'getUserMessageHistory' : ActorMethod<[Principal], Array<Message>>,
+  'getUserPoints' : ActorMethod<[Principal], bigint>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'givePoints' : ActorMethod<[Principal, bigint, PointReason], bigint>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'saveUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'markMessagesAsRead' : ActorMethod<[], undefined>,
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'sendMessageToCoach' : ActorMethod<
     [string, MessageType, [] | [string]],
     undefined

@@ -16,6 +16,8 @@ import type { Principal } from "@icp-sdk/core/principal";
 import { format } from "date-fns";
 import {
   AlertCircle,
+  Check,
+  CheckCheck,
   Dumbbell,
   FileText,
   Loader2,
@@ -23,13 +25,19 @@ import {
   MessageSquare,
   Paperclip,
   Send,
+  Star,
   Users,
   XCircle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BookingStatus, MessageType, SenderRole } from "../backend";
+import {
+  BookingStatus,
+  MessageType,
+  PointReason,
+  SenderRole,
+} from "../backend";
 import type { Booking, Message } from "../backend";
 import { loadConfig } from "../config";
 import { useActor } from "../hooks/useActor";
@@ -37,16 +45,17 @@ import {
   useAdminCancelBooking,
   useGetAllBookings,
   useGetAllUsers,
+  useGetLastReadTimestamp,
   useGetUserMessageHistoryAdmin,
+  useGetUserPoints,
   useGetUserProfile,
+  useGivePoints,
   useSendMessageToUser,
 } from "../hooks/useQueries";
 import { StorageClient } from "../utils/StorageClient";
 
 const ADMIN_PASSWORD = "hncoach2024";
 const ADMIN_AUTH_KEY = "hncoach_admin_auth";
-
-// ─── Sub-components ─────────────────────────────────────────────────────────
 
 function AdminFileMessage({
   blobId,
@@ -113,6 +122,40 @@ function AdminImageMessage({
   );
 }
 
+function MessageTicks({
+  msgTimestamp,
+  lastReadTimestamp,
+}: {
+  msgTimestamp: bigint;
+  lastReadTimestamp: bigint | null | undefined;
+}) {
+  if (lastReadTimestamp === null || lastReadTimestamp === undefined) {
+    return (
+      <Check
+        className="w-3.5 h-3.5 inline-block"
+        style={{ color: "#A8B6C3" }}
+        aria-label="Sent"
+      />
+    );
+  }
+  if (msgTimestamp <= lastReadTimestamp) {
+    return (
+      <CheckCheck
+        className="w-3.5 h-3.5 inline-block"
+        style={{ color: "#4ade80" }}
+        aria-label="Seen"
+      />
+    );
+  }
+  return (
+    <CheckCheck
+      className="w-3.5 h-3.5 inline-block"
+      style={{ color: "#A8B6C3" }}
+      aria-label="Delivered"
+    />
+  );
+}
+
 function UserListItem({
   principal,
   isSelected,
@@ -156,6 +199,156 @@ function UserListItem({
   );
 }
 
+function PointsBar({ selectedUser }: { selectedUser: Principal }) {
+  const { data: totalPoints, isLoading: pointsLoading } =
+    useGetUserPoints(selectedUser);
+  const givePoints = useGivePoints();
+  const [customPoints, setCustomPoints] = useState("");
+
+  const total = Number(totalPoints ?? BigInt(0));
+
+  const handlePreset = async (points: number, reason: PointReason) => {
+    try {
+      const newTotal = await givePoints.mutateAsync({
+        user: selectedUser,
+        points: BigInt(points),
+        reason,
+      });
+      toast.success(`Points awarded! New total: ${Number(newTotal)} pts`);
+    } catch {
+      toast.error("Failed to give points");
+    }
+  };
+
+  const handleCustomGive = async () => {
+    const pts = Number.parseInt(customPoints, 10);
+    if (!pts || pts < 1) return;
+    try {
+      const newTotal = await givePoints.mutateAsync({
+        user: selectedUser,
+        points: BigInt(pts),
+        reason: PointReason.custom,
+      });
+      toast.success(`Points awarded! New total: ${Number(newTotal)} pts`);
+      setCustomPoints("");
+    } catch {
+      toast.error("Failed to give points");
+    }
+  };
+
+  const isGiving = givePoints.isPending;
+
+  return (
+    <div
+      className="px-3 py-2 border-b flex flex-wrap items-center gap-2"
+      style={{
+        background: "rgba(255,106,0,0.06)",
+        borderColor: "rgba(255,106,0,0.2)",
+      }}
+      data-ocid="admin.points.panel"
+    >
+      {/* Total display */}
+      <div
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg flex-shrink-0"
+        style={{
+          background: "rgba(255,106,0,0.12)",
+          border: "1px solid rgba(255,106,0,0.3)",
+        }}
+      >
+        <Star className="w-3.5 h-3.5" style={{ color: "#FF6A00" }} />
+        {pointsLoading ? (
+          <Loader2
+            className="w-3 h-3 animate-spin"
+            style={{ color: "#FF6A00" }}
+          />
+        ) : (
+          <span className="text-xs font-bold" style={{ color: "#FF6A00" }}>
+            {total} pts
+          </span>
+        )}
+      </div>
+
+      {/* Preset buttons */}
+      <button
+        type="button"
+        onClick={() => handlePreset(20, PointReason.weightImage)}
+        disabled={isGiving}
+        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+        style={{
+          background: "rgba(255,106,0,0.1)",
+          border: "1px solid rgba(255,106,0,0.25)",
+          color: "#FFA560",
+        }}
+        title="Give 20 points for weight image"
+        data-ocid="admin.points.button"
+      >
+        🏋️ +20
+      </button>
+
+      <button
+        type="button"
+        onClick={() => handlePreset(30, PointReason.footsteps)}
+        disabled={isGiving}
+        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+        style={{
+          background: "rgba(255,106,0,0.1)",
+          border: "1px solid rgba(255,106,0,0.25)",
+          color: "#FFA560",
+        }}
+        title="Give 30 points for footsteps"
+        data-ocid="admin.points.button"
+      >
+        👣 +30
+      </button>
+
+      <button
+        type="button"
+        onClick={() => handlePreset(50, PointReason.dailyBonus)}
+        disabled={isGiving}
+        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
+        style={{
+          background: "rgba(255,106,0,0.1)",
+          border: "1px solid rgba(255,106,0,0.25)",
+          color: "#FFA560",
+        }}
+        title="Give 50 daily bonus points"
+        data-ocid="admin.points.button"
+      >
+        ⭐ +50
+      </button>
+
+      {/* Custom points input */}
+      <div className="flex items-center gap-1.5 ml-auto">
+        <input
+          type="number"
+          min={1}
+          value={customPoints}
+          onChange={(e) => setCustomPoints(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleCustomGive()}
+          placeholder="pts"
+          className="w-16 h-7 px-2 rounded-lg text-xs text-white outline-none border text-center"
+          style={{
+            background: "#1A3A4F",
+            borderColor: "rgba(255,106,0,0.3)",
+            color: "white",
+          }}
+          data-ocid="admin.points.input"
+        />
+        <button
+          type="button"
+          onClick={handleCustomGive}
+          disabled={isGiving || !customPoints || Number(customPoints) < 1}
+          className="h-7 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-40"
+          style={{ background: "#FF6A00" }}
+          data-ocid="admin.points.submit_button"
+        >
+          {isGiving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Give"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ConversationPanel({
   selectedUser,
   storageClient,
@@ -166,6 +359,7 @@ function ConversationPanel({
   const { data: profile } = useGetUserProfile(selectedUser);
   const { data: messages, isLoading } =
     useGetUserMessageHistoryAdmin(selectedUser);
+  const { data: lastReadTimestamp } = useGetLastReadTimestamp(selectedUser);
   const sendToUser = useSendMessageToUser();
   const [replyText, setReplyText] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -210,14 +404,12 @@ function ConversationPanel({
       toast.error("Storage not ready");
       return;
     }
-
     const isPdf = file.type === "application/pdf";
     const isImage = file.type.startsWith("image/");
     if (!isPdf && !isImage) {
       toast.error("Only images and PDFs are supported");
       return;
     }
-
     setIsUploading(true);
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -316,11 +508,14 @@ function ConversationPanel({
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Points bar */}
+      <PointsBar selectedUser={selectedUser} />
+
+      {/* Messages area */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-3"
-        style={{ maxHeight: "calc(100vh - 380px)" }}
+        style={{ maxHeight: "calc(100vh - 420px)" }}
         data-ocid="admin.messages.panel"
       >
         {isLoading ? (
@@ -369,10 +564,14 @@ function ConversationPanel({
                       initial={{ opacity: 0, y: 6 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2 }}
-                      className={`flex mb-2 ${isCoach ? "justify-end" : "justify-start"}`}
+                      className={`flex mb-2 ${
+                        isCoach ? "justify-end" : "justify-start"
+                      }`}
                     >
                       <div
-                        className={`max-w-[75%] flex flex-col ${isCoach ? "items-end" : "items-start"}`}
+                        className={`max-w-[75%] flex flex-col ${
+                          isCoach ? "items-end" : "items-start"
+                        }`}
                       >
                         {!isCoach && (
                           <span
@@ -419,12 +618,20 @@ function ConversationPanel({
                             msg.message
                           )}
                         </div>
-                        <span
-                          className="text-xs mt-1 px-1"
-                          style={{ color: "#A8B6C3" }}
-                        >
-                          {formatTime(msg.timestamp)}
-                        </span>
+                        <div className="flex items-center gap-1 mt-1 px-1">
+                          <span
+                            className="text-xs"
+                            style={{ color: "#A8B6C3" }}
+                          >
+                            {formatTime(msg.timestamp)}
+                          </span>
+                          {isCoach && (
+                            <MessageTicks
+                              msgTimestamp={msg.timestamp}
+                              lastReadTimestamp={lastReadTimestamp}
+                            />
+                          )}
+                        </div>
                       </div>
                     </motion.div>
                   );
@@ -435,7 +642,6 @@ function ConversationPanel({
         )}
       </div>
 
-      {/* Reply input */}
       <div
         className="border-t p-3"
         style={{ borderColor: "#203B4D", background: "#0D2030" }}
@@ -666,7 +872,6 @@ function MessagesTab({
       style={{ borderColor: "#203B4D" }}
       data-ocid="admin.messages.panel"
     >
-      {/* User list sidebar */}
       <div
         className="w-64 flex-shrink-0 border-r flex flex-col"
         style={{ borderColor: "#203B4D", background: "#0D2030" }}
@@ -712,7 +917,6 @@ function MessagesTab({
         </ScrollArea>
       </div>
 
-      {/* Conversation panel */}
       <ConversationPanel
         selectedUser={selectedUser}
         storageClient={storageClient}
@@ -720,8 +924,6 @@ function MessagesTab({
     </div>
   );
 }
-
-// ─── Password Gate ───────────────────────────────────────────────────────────
 
 function PasswordGate({ onAuth }: { onAuth: () => void }) {
   const [password, setPassword] = useState("");
@@ -754,7 +956,6 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -767,7 +968,6 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
           </span>
         </div>
 
-        {/* Card */}
         <div
           className="rounded-2xl p-8 border shadow-card"
           style={{ background: "#112A3A", borderColor: "#203B4D" }}
@@ -866,7 +1066,7 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
                 style={{ color: "#FF6A00" }}
                 data-ocid="admin.login.link"
               >
-                Go to Login →
+                Go to Login
               </a>
             </div>
           </div>
@@ -876,16 +1076,14 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
   );
 }
 
-// ─── Admin Panel ─────────────────────────────────────────────────────────────
-
 function AdminPanel() {
-  const { actor, isFetching } = useActor();
+  const { isFetching } = useActor();
   const [storageClient, setStorageClient] = useState<StorageClient | null>(
     null,
   );
 
   useEffect(() => {
-    if (!actor || isFetching) return;
+    if (isFetching) return;
     loadConfig().then((config) => {
       import("@icp-sdk/core/agent").then(({ HttpAgent }) => {
         const agent = new HttpAgent({ host: config.backend_host });
@@ -902,45 +1100,28 @@ function AdminPanel() {
         setStorageClient(sc);
       });
     });
-  }, [actor, isFetching]);
+  }, [isFetching]);
 
-  if (!actor) {
+  if (isFetching) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center px-4"
+        className="min-h-screen flex items-center justify-center"
         style={{ background: "#0B2232" }}
+        data-ocid="admin.loading_state"
       >
-        <div
-          className="w-full max-w-md rounded-2xl p-8 border shadow-card text-center"
-          style={{ background: "#112A3A", borderColor: "#203B4D" }}
-          data-ocid="admin.auth.error_state"
-        >
-          <AlertCircle
-            className="w-12 h-12 mx-auto mb-4"
-            style={{ color: "#FF6A00" }}
-          />
-          <h2 className="text-xl font-display font-bold text-white mb-2">
-            Internet Identity Required
-          </h2>
-          <p className="text-sm mb-6" style={{ color: "#A8B6C3" }}>
-            Please log in with your Internet Identity first, then access the
-            admin panel.
-          </p>
-          {isFetching ? (
+        <div className="flex flex-col items-center gap-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center"
+            style={{ background: "rgba(255,106,0,0.15)" }}
+          >
             <Loader2
-              className="w-6 h-6 animate-spin mx-auto"
+              className="w-6 h-6 animate-spin"
               style={{ color: "#FF6A00" }}
             />
-          ) : (
-            <a
-              href="/login"
-              className="inline-flex items-center justify-center h-11 px-6 rounded-xl font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ background: "#FF6A00" }}
-              data-ocid="admin.auth.link"
-            >
-              Go to Login
-            </a>
-          )}
+          </div>
+          <p className="text-sm font-medium" style={{ color: "#A8B6C3" }}>
+            Loading admin panel...
+          </p>
         </div>
       </div>
     );
@@ -951,7 +1132,6 @@ function AdminPanel() {
       className="min-h-screen flex flex-col"
       style={{ background: "#0B2232" }}
     >
-      {/* Admin header */}
       <header
         className="sticky top-0 z-50 w-full border-b"
         style={{ background: "#071824", borderColor: "#203B4D" }}
@@ -1063,8 +1243,6 @@ function AdminPanel() {
     </div>
   );
 }
-
-// ─── Main Export ─────────────────────────────────────────────────────────────
 
 export function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {

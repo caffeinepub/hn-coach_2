@@ -1,9 +1,45 @@
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CheckCircle, Dumbbell, Loader2, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle,
+  Dumbbell,
+  Heart,
+  Leaf,
+  Loader2,
+  Lock,
+  MessageCircleHeart,
+  ShieldCheck,
+  Sparkles,
+  UtensilsCrossed,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+
+const coachingTopics = [
+  {
+    icon: UtensilsCrossed,
+    label: "Diet & Nutrition",
+    desc: "Personalized meal plans, healthy eating habits, and nutritional guidance",
+  },
+  {
+    icon: Dumbbell,
+    label: "Exercise Routines",
+    desc: "Custom workout plans tailored to your body, goals, and fitness level",
+  },
+  {
+    icon: Leaf,
+    label: "Lifestyle & Habits",
+    desc: "Build better daily routines, sleep habits, stress management",
+  },
+  {
+    icon: Sparkles,
+    label: "Overall Wellness",
+    desc: "Holistic approach to physical, mental, and emotional well-being",
+  },
+];
+
+const topicPills = ["Diet", "Exercise", "Lifestyle", "Wellness"];
 
 export function LoginPage() {
   const { login, identity, isLoggingIn, isInitializing } =
@@ -23,11 +59,12 @@ export function LoginPage() {
         background: "linear-gradient(135deg, #071824 0%, #0B2232 100%)",
       }}
     >
-      {/* Left panel - branding */}
+      {/* ─── Left panel ─────────────────────────────────────────── */}
       <div
         className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12"
         style={{ background: "#071824" }}
       >
+        {/* Logo */}
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
@@ -35,53 +72,90 @@ export function LoginPage() {
           >
             <Dumbbell className="w-6 h-6 text-white" />
           </div>
-          <span className="text-white font-display font-bold text-2xl">
+          <span className="text-white font-bold text-2xl">
             HN<span style={{ color: "#FF6A00" }}> Coach</span>
           </span>
         </div>
 
-        <div className="space-y-8">
+        {/* Main content */}
+        <div className="space-y-10">
+          {/* Emotional tagline */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl font-display font-bold text-white leading-tight">
-              Get started
+            <div className="flex items-center gap-2 mb-3">
+              <Heart className="w-5 h-5" style={{ color: "#FF6A00" }} />
+              <span
+                className="text-sm font-semibold uppercase tracking-widest"
+                style={{ color: "#FF6A00" }}
+              >
+                Your personal coach
+              </span>
+            </div>
+            <h1 className="text-3xl font-bold text-white leading-tight">
+              Your personal coach is not less than{" "}
+              <span style={{ color: "#FF6A00" }}>your best friend</span>
             </h1>
-            <p className="mt-4 text-lg" style={{ color: "#A8B6C3" }}>
-              Create your account to begin your coaching journey
+            <p className="mt-4 text-base" style={{ color: "#A8B6C3" }}>
+              Ask from your heart — we&apos;re here to listen, guide, and grow
+              with you.
             </p>
           </motion.div>
 
-          <div className="space-y-4">
-            {[
-              "Secure, passwordless authentication",
-              "Personal coaching dashboard",
-              "Direct messaging with your coach",
-              "Easy appointment scheduling",
-            ].map((feature, i) => (
+          {/* Coaching topic cards */}
+          <div className="grid grid-cols-2 gap-4">
+            {coachingTopics.map((topic, i) => (
               <motion.div
-                key={feature}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+                key={topic.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
-                className="flex items-center gap-4 p-4 rounded-xl"
-                style={{ background: "#112A3A" }}
+                className="p-4 rounded-xl border"
+                style={{
+                  background: "#112A3A",
+                  borderColor: "#1E3A4A",
+                }}
               >
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
                   style={{ background: "rgba(255,106,0,0.15)" }}
                 >
-                  <CheckCircle
+                  <topic.icon
                     className="w-5 h-5"
                     style={{ color: "#FF6A00" }}
                   />
                 </div>
-                <p className="font-medium text-white">{feature}</p>
+                <p className="font-semibold text-white text-sm mb-1">
+                  {topic.label}
+                </p>
+                <p
+                  className="text-xs leading-relaxed"
+                  style={{ color: "#A8B6C3" }}
+                >
+                  {topic.desc}
+                </p>
               </motion.div>
             ))}
           </div>
+
+          {/* Privacy badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl border"
+            style={{ background: "#1E3A4A", borderColor: "#2A4F63" }}
+          >
+            <Lock
+              className="w-5 h-5 flex-shrink-0"
+              style={{ color: "#FF6A00" }}
+            />
+            <span className="text-sm font-medium text-white">
+              100% Confidential Chat &nbsp;·&nbsp; 100% Privacy 🔏
+            </span>
+          </motion.div>
         </div>
 
         <p className="text-sm" style={{ color: "#A8B6C3" }}>
@@ -89,7 +163,7 @@ export function LoginPage() {
         </p>
       </div>
 
-      {/* Right panel - sign in form */}
+      {/* ─── Right panel ─────────────────────────────────────────── */}
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
@@ -105,43 +179,99 @@ export function LoginPage() {
             >
               <Dumbbell className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white font-display font-bold text-xl">
+            <span className="text-white font-bold text-xl">
               HN<span style={{ color: "#FF6A00" }}> Coach</span>
             </span>
           </div>
 
           <div
-            className="rounded-2xl p-8 border border-hnc-border shadow-card"
-            style={{ background: "#112A3A" }}
+            className="rounded-2xl p-8 border shadow-card"
+            style={{ background: "#112A3A", borderColor: "#1E3A4A" }}
           >
-            <div className="mb-8">
-              <h2 className="text-2xl font-display font-bold text-white">
-                Get started
-              </h2>
-              <p className="mt-1 text-sm" style={{ color: "#A8B6C3" }}>
-                Create your account to begin your coaching journey
+            {/* Emotional header */}
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageCircleHeart
+                  className="w-5 h-5"
+                  style={{ color: "#FF6A00" }}
+                />
+                <h2 className="text-2xl font-bold text-white">
+                  Ask from your heart 💬
+                </h2>
+              </div>
+              <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                Share your goals, struggles, diet, exercise routines, lifestyle
+                — your coach is your trusted companion
               </p>
+
+              {/* Privacy row */}
+              <div className="flex items-center gap-2 mt-3">
+                <Lock
+                  className="w-3.5 h-3.5 flex-shrink-0"
+                  style={{ color: "#FF6A00" }}
+                />
+                <span className="text-xs" style={{ color: "#A8B6C3" }}>
+                  100% Confidential &nbsp;·&nbsp; 100% Private 🔏
+                </span>
+              </div>
+
+              {/* Topic pills */}
+              <div className="flex flex-wrap gap-2 mt-4">
+                {topicPills.map((pill) => (
+                  <span
+                    key={pill}
+                    className="px-3 py-1 rounded-full text-xs font-semibold"
+                    style={{ background: "#1E3A4A", color: "#FF6A00" }}
+                  >
+                    {pill}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            {/* Features - mobile only */}
-            <div className="space-y-3 mb-8 lg:hidden">
-              {[
-                "Secure, passwordless authentication",
-                "Personal coaching dashboard",
-                "Direct messaging with your coach",
-                "Easy appointment scheduling",
-              ].map((feature) => (
-                <div key={feature} className="flex items-center gap-3">
-                  <CheckCircle
-                    className="w-4 h-4 flex-shrink-0"
-                    style={{ color: "#FF6A00" }}
-                  />
-                  <span className="text-sm" style={{ color: "#A8B6C3" }}>
-                    {feature}
-                  </span>
-                </div>
-              ))}
+            {/* Mobile – emotional tagline */}
+            <div className="mb-6 lg:hidden space-y-3">
+              <div
+                className="flex items-center gap-3 px-4 py-3 rounded-xl border"
+                style={{ background: "#1E3A4A", borderColor: "#2A4F63" }}
+              >
+                <Lock
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: "#FF6A00" }}
+                />
+                <span className="text-xs font-medium text-white">
+                  100% Confidential Chat &nbsp;·&nbsp; 100% Privacy 🔏
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-white">
+                Your personal coach is not less than{" "}
+                <span style={{ color: "#FF6A00" }}>your best friend</span>
+              </p>
+              <div className="space-y-2">
+                {[
+                  "Secure, passwordless authentication",
+                  "Personal coaching dashboard",
+                  "Direct messaging with your coach",
+                  "Easy appointment scheduling",
+                ].map((feature) => (
+                  <div key={feature} className="flex items-center gap-3">
+                    <CheckCircle
+                      className="w-4 h-4 flex-shrink-0"
+                      style={{ color: "#FF6A00" }}
+                    />
+                    <span className="text-xs" style={{ color: "#A8B6C3" }}>
+                      {feature}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Divider */}
+            <div
+              className="w-full border-t mb-6"
+              style={{ borderColor: "#1E3A4A" }}
+            />
 
             <div className="space-y-4">
               <Button

@@ -1,4 +1,5 @@
 import Map "mo:core/Map";
+import Nat "mo:core/Nat";
 import List "mo:core/List";
 import Principal "mo:core/Principal";
 
@@ -25,17 +26,19 @@ module {
     #file;
   };
 
-  type OldMessage = {
+  type Message = {
     senderRole : SenderRole;
     message : Text;
+    messageType : MessageType;
+    blobId : ?Text;
     timestamp : Int;
   };
 
-  type OldMessageHistory = List.List<OldMessage>;
+  type MessageHistory = List.List<Message>;
 
-  type OldBooking = {
+  type Booking = {
     id : Nat;
-    user : Principal.Principal;
+    user : Principal;
     date : Text;
     timeSlot : Text;
     status : BookingStatus;
@@ -47,73 +50,44 @@ module {
     #cancelled;
   };
 
+  type PointReason = {
+    #weightImage;
+    #footsteps;
+    #dailyBonus;
+    #custom;
+  };
+
+  type PointRecord = {
+    points : Nat;
+    reason : PointReason;
+    timestamp : Int;
+  };
+
   type OldActor = {
-    profileStore : Map.Map<Principal.Principal, UserProfile>;
-    chatStore : Map.Map<Principal.Principal, OldMessageHistory>;
-    bookingStore : Map.Map<Nat, OldBooking>;
+    profileStore : Map.Map<Principal, UserProfile>;
+    chatStore : Map.Map<Principal, MessageHistory>;
+    bookingStore : Map.Map<Nat, Booking>;
+    lastReadTimestamps : Map.Map<Principal, Int>;
     nextBookingId : Nat;
-  };
-
-  type NewMessage = {
-    senderRole : SenderRole;
-    message : Text;
-    messageType : MessageType;
-    blobId : ?Text;
-    timestamp : Int;
-  };
-
-  type NewMessageHistory = List.List<NewMessage>;
-  type NewBooking = {
-    id : Nat;
-    user : Principal.Principal;
-    date : Text;
-    timeSlot : Text;
-    status : BookingStatus;
-    timestamp : Int;
   };
 
   type NewActor = {
-    profileStore : Map.Map<Principal.Principal, UserProfile>;
-    chatStore : Map.Map<Principal.Principal, NewMessageHistory>;
-    bookingStore : Map.Map<Nat, NewBooking>;
+    profileStore : Map.Map<Principal, UserProfile>;
+    chatStore : Map.Map<Principal, MessageHistory>;
+    bookingStore : Map.Map<Nat, Booking>;
+    lastReadTimestamps : Map.Map<Principal, Int>;
     nextBookingId : Nat;
+    pointsStore : Map.Map<Principal, List.List<PointRecord>>;
   };
 
   public func run(old : OldActor) : NewActor {
-    let newChatStore = old.chatStore.map<Principal.Principal, OldMessageHistory, NewMessageHistory>(
-      func(_principal, oldHistory) {
-        oldHistory.map<OldMessage, NewMessage>(
-          func(oldMessage) {
-            {
-              senderRole = oldMessage.senderRole;
-              message = oldMessage.message;
-              messageType = #text;
-              blobId = null;
-              timestamp = oldMessage.timestamp;
-            };
-          }
-        );
-      }
-    );
-
-    let newBookingStore = old.bookingStore.map<Nat, OldBooking, NewBooking>(
-      func(_id, oldBooking) {
-        {
-          id = oldBooking.id;
-          user = oldBooking.user;
-          date = oldBooking.date;
-          timeSlot = oldBooking.timeSlot;
-          status = oldBooking.status;
-          timestamp = oldBooking.timestamp;
-        };
-      }
-    );
-
     {
       profileStore = old.profileStore;
-      chatStore = newChatStore;
-      bookingStore = newBookingStore;
+      chatStore = old.chatStore;
+      bookingStore = old.bookingStore;
+      lastReadTimestamps = old.lastReadTimestamps;
       nextBookingId = old.nextBookingId;
+      pointsStore = Map.empty<Principal, List.List<PointRecord>>();
     };
   };
 };

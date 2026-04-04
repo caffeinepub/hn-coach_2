@@ -46,6 +46,17 @@ export const UserProfile = IDL.Record({
   'targetGoal' : IDL.Text,
   'avatarBlobId' : IDL.Opt(IDL.Text),
 });
+export const PointReason = IDL.Variant({
+  'custom' : IDL.Null,
+  'dailyBonus' : IDL.Null,
+  'footsteps' : IDL.Null,
+  'weightImage' : IDL.Null,
+});
+export const PointRecord = IDL.Record({
+  'timestamp' : IDL.Int,
+  'points' : IDL.Nat,
+  'reason' : PointReason,
+});
 export const MessageType = IDL.Variant({
   'file' : IDL.Null,
   'text' : IDL.Null,
@@ -111,8 +122,15 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getBookingsByDate' : IDL.Func([IDL.Text], [IDL.Vec(Booking)], ['query']),
+  'getCallerPointHistory' : IDL.Func([], [IDL.Vec(PointRecord)], ['query']),
+  'getCallerPoints' : IDL.Func([], [IDL.Nat], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getLastReadTimestamp' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(IDL.Int)],
+      ['query'],
+    ),
   'getMessageHistory' : IDL.Func([], [IDL.Vec(Message)], ['query']),
   'getUserBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
   'getUserMessageHistory' : IDL.Func(
@@ -120,13 +138,16 @@ export const idlService = IDL.Service({
       [IDL.Vec(Message)],
       ['query'],
     ),
+  'getUserPoints' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'givePoints' : IDL.Func([IDL.Principal, IDL.Nat, PointReason], [IDL.Nat], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'saveUserProfile' : IDL.Func([UserProfile], [], []),
+  'markMessagesAsRead' : IDL.Func([], [], []),
+  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'sendMessageToCoach' : IDL.Func(
       [IDL.Text, MessageType, IDL.Opt(IDL.Text)],
       [],
@@ -179,6 +200,17 @@ export const idlFactory = ({ IDL }) => {
     'email' : IDL.Text,
     'targetGoal' : IDL.Text,
     'avatarBlobId' : IDL.Opt(IDL.Text),
+  });
+  const PointReason = IDL.Variant({
+    'custom' : IDL.Null,
+    'dailyBonus' : IDL.Null,
+    'footsteps' : IDL.Null,
+    'weightImage' : IDL.Null,
+  });
+  const PointRecord = IDL.Record({
+    'timestamp' : IDL.Int,
+    'points' : IDL.Nat,
+    'reason' : PointReason,
   });
   const MessageType = IDL.Variant({
     'file' : IDL.Null,
@@ -246,8 +278,15 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getBookingsByDate' : IDL.Func([IDL.Text], [IDL.Vec(Booking)], ['query']),
+    'getCallerPointHistory' : IDL.Func([], [IDL.Vec(PointRecord)], ['query']),
+    'getCallerPoints' : IDL.Func([], [IDL.Nat], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getLastReadTimestamp' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(IDL.Int)],
+        ['query'],
+      ),
     'getMessageHistory' : IDL.Func([], [IDL.Vec(Message)], ['query']),
     'getUserBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
     'getUserMessageHistory' : IDL.Func(
@@ -255,13 +294,20 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Message)],
         ['query'],
       ),
+    'getUserPoints' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'givePoints' : IDL.Func(
+        [IDL.Principal, IDL.Nat, PointReason],
+        [IDL.Nat],
+        [],
+      ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'saveUserProfile' : IDL.Func([UserProfile], [], []),
+    'markMessagesAsRead' : IDL.Func([], [], []),
+    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'sendMessageToCoach' : IDL.Func(
         [IDL.Text, MessageType, IDL.Opt(IDL.Text)],
         [],
