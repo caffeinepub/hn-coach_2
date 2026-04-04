@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import {
   Camera,
   ChevronDown,
+  ChevronUp,
   Clock,
   FileText,
   History,
@@ -159,6 +160,7 @@ function PointsSummaryCard() {
   const { data: totalPoints, isLoading: pointsLoading } = useGetCallerPoints();
   const { data: history, isLoading: historyLoading } =
     useGetCallerPointHistory();
+  const [showHistory, setShowHistory] = useState(false);
 
   const isLoading = pointsLoading || historyLoading;
   const total = Number(totalPoints ?? BigInt(0));
@@ -210,72 +212,90 @@ function PointsSummaryCard() {
           {/* Points History */}
           {sortedHistory.length > 0 && (
             <div>
-              <div className="flex items-center gap-1.5 mb-2">
+              <button
+                type="button"
+                onClick={() => setShowHistory((v) => !v)}
+                className="flex items-center gap-1.5 mb-2 w-full text-left hover:opacity-80 transition-opacity"
+                data-ocid="chat.points_history.toggle"
+              >
                 <History className="w-3.5 h-3.5" style={{ color: "#A8B6C3" }} />
                 <span
-                  className="text-xs font-semibold uppercase tracking-wider"
+                  className="text-xs font-semibold uppercase tracking-wider flex-1"
                   style={{ color: "#A8B6C3" }}
                 >
                   Points History
                 </span>
-              </div>
-              <ScrollArea
-                className="max-h-48"
-                data-ocid="chat.points_history.panel"
-              >
-                <div className="space-y-1.5 pr-2">
-                  {sortedHistory.map((record, i) => {
-                    const ms = Number(record.timestamp) / 1_000_000;
-                    const dateStr = format(new Date(ms), "MMM d, yyyy");
-                    const category = getCategoryLabel(record.reason);
-                    return (
-                      <div
-                        key={`${record.timestamp}-${i}`}
-                        className="flex items-start justify-between gap-2 px-3 py-2 rounded-lg"
-                        style={{
-                          background: "rgba(255,106,0,0.06)",
-                          border: "1px solid rgba(255,106,0,0.14)",
-                        }}
-                        data-ocid={`chat.points_history.item.${i + 1}`}
-                      >
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span
-                              className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                              style={{
-                                background: "rgba(255,106,0,0.15)",
-                                color: "#FFA560",
-                              }}
-                            >
-                              {category}
-                            </span>
-                            <span
-                              className="text-xs"
-                              style={{ color: "#A8B6C3" }}
-                            >
-                              {dateStr}
-                            </span>
-                          </div>
-                          {record.remark && (
-                            <p
-                              className="text-xs truncate"
-                              style={{ color: "#8BA3B5" }}
-                            >
-                              {record.remark}
-                            </p>
-                          )}
-                        </div>
-                        <span
-                          className="text-sm font-bold flex-shrink-0 tabular-nums"
-                          style={{ color: "#FF6A00" }}
+                {showHistory ? (
+                  <ChevronUp
+                    className="w-3.5 h-3.5"
+                    style={{ color: "#A8B6C3" }}
+                  />
+                ) : (
+                  <ChevronDown
+                    className="w-3.5 h-3.5"
+                    style={{ color: "#A8B6C3" }}
+                  />
+                )}
+              </button>
+              {showHistory && (
+                <ScrollArea
+                  className="max-h-48"
+                  data-ocid="chat.points_history.panel"
+                >
+                  <div className="space-y-1.5 pr-2">
+                    {sortedHistory.map((record, i) => {
+                      const ms = Number(record.timestamp) / 1_000_000;
+                      const dateStr = format(new Date(ms), "MMM d, yyyy");
+                      const category = getCategoryLabel(record.reason);
+                      return (
+                        <div
+                          key={`${record.timestamp}-${i}`}
+                          className="flex items-start justify-between gap-2 px-3 py-2 rounded-lg"
+                          style={{
+                            background: "rgba(255,106,0,0.06)",
+                            border: "1px solid rgba(255,106,0,0.14)",
+                          }}
+                          data-ocid={`chat.points_history.item.${i + 1}`}
                         >
-                          +{Number(record.points)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span
+                                className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                                style={{
+                                  background: "rgba(255,106,0,0.15)",
+                                  color: "#FFA560",
+                                }}
+                              >
+                                {category}
+                              </span>
+                              <span
+                                className="text-xs"
+                                style={{ color: "#A8B6C3" }}
+                              >
+                                {dateStr}
+                              </span>
+                            </div>
+                            {record.remark && (
+                              <p
+                                className="text-xs truncate"
+                                style={{ color: "#8BA3B5" }}
+                              >
+                                {record.remark}
+                              </p>
+                            )}
+                          </div>
+                          <span
+                            className="text-sm font-bold flex-shrink-0 tabular-nums"
+                            style={{ color: "#FF6A00" }}
+                          >
+                            +{Number(record.points)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
           )}
 
