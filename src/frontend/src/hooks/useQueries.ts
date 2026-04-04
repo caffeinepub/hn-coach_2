@@ -240,11 +240,15 @@ export function useAdminCancelBooking() {
 
 export function useMarkMessagesAsRead() {
   const { actor } = useActor();
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
       if (!actor) throw new Error("Actor not available");
       // markMessagesAsRead exists in Candid service but not in typed wrapper
       await (actor as any).markMessagesAsRead();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["callerUnreadCount"] });
     },
   });
 }
@@ -262,6 +266,62 @@ export function useGetLastReadTimestamp(user: Principal | null) {
     },
     enabled: !!actor && !actorFetching && !!user,
     refetchInterval: 5000,
+  });
+}
+
+// Unread Count Hooks
+
+export function useGetCallerUnreadCount() {
+  const { actor, isFetching: actorFetching } = useActor();
+  return useQuery<bigint>({
+    queryKey: ["callerUnreadCount"],
+    queryFn: async () => {
+      if (!actor) return BigInt(0);
+      try {
+        return await (actor as any).getCallerUnreadCount();
+      } catch {
+        return BigInt(0);
+      }
+    },
+    enabled: !!actor && !actorFetching,
+    refetchInterval: 5000,
+  });
+}
+
+export function useGetCoachUnreadCount(user: Principal | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+  return useQuery<bigint>({
+    queryKey: ["coachUnreadCount", user?.toString()],
+    queryFn: async () => {
+      if (!actor || !user) return BigInt(0);
+      try {
+        return await (actor as any).getCoachUnreadCountForUser(user);
+      } catch {
+        return BigInt(0);
+      }
+    },
+    enabled: !!actor && !actorFetching && !!user,
+    refetchInterval: 5000,
+  });
+}
+
+export function useMarkCoachReadForUser() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (user: Principal) => {
+      if (!actor) throw new Error("Actor not available");
+      try {
+        await (actor as any).markCoachReadForUser(user);
+      } catch {
+        // silently ignore if not implemented yet
+      }
+    },
+    onSuccess: (_data, user) => {
+      queryClient.invalidateQueries({
+        queryKey: ["coachUnreadCount", user.toString()],
+      });
+    },
   });
 }
 

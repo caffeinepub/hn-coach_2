@@ -95,6 +95,8 @@ actor {
   let chatStore = Map.empty<Principal, MessageHistory>();
   let bookingStore = Map.empty<Nat, Booking>();
   let lastReadTimestamps = Map.empty<Principal, Int>();
+  // Tracks when coach last read messages from each user (for admin unread counts)
+  let coachLastReadTimestamps = Map.empty<Principal, Int>();
   let pointsStore = Map.empty<Principal, List.List<PointRecord>>();
   // Stores active day numbers (nanoseconds / 86400_000_000_000) per user
   let streakStore = Map.empty<Principal, List.List<Int>>();
@@ -242,6 +244,64 @@ actor {
   // No auth check - admin needs to call this to show tick status
   public query func getLastReadTimestamp(user : Principal) : async ?Int {
     lastReadTimestamps.get(user);
+  };
+
+  // Called by the admin/coach when they open a user's conversation
+  // Records when coach last read messages from this user
+  public shared func markCoachReadForUser(user : Principal) : async () {
+    coachLastReadTimestamps.add(user, Time.now());
+  };
+
+  // Returns unread count for the caller (user) - counts coach messages not yet read
+  public query ({ caller }) func getCallerUnreadCount() : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can fetch their unread count");
+    };
+    let lastRead = switch (lastReadTimestamps.get(caller)) {
+      case (null) { 0 };
+      case (?ts) { ts };
+    };
+    let history = switch (chatStore.get(caller)) {
+      case (null) { [] };
+      case (?h) { h.toArray() };
+    };
+    var count = 0;
+    for (msg in history.vals()) {
+      switch (msg.senderRole) {
+        case (#coach) {
+          if (msg.timestamp > lastRead) {
+            count += 1;
+          };
+        };
+        case (#user) {};
+      };
+    };
+    count;
+  };
+
+  // Returns unread message count from user to coach - how many user messages coach hasn't read
+  // No auth check - admin calls this to show unread badges per client
+  public query func getCoachUnreadCountForUser(user : Principal) : async Nat {
+    let lastRead = switch (coachLastReadTimestamps.get(user)) {
+      case (null) { 0 };
+      case (?ts) { ts };
+    };
+    let history = switch (chatStore.get(user)) {
+      case (null) { [] };
+      case (?h) { h.toArray() };
+    };
+    var count = 0;
+    for (msg in history.vals()) {
+      switch (msg.senderRole) {
+        case (#user) {
+          if (msg.timestamp > lastRead) {
+            count += 1;
+          };
+        };
+        case (#coach) {};
+      };
+    };
+    count;
   };
 
   // CHAT ADMIN FUNCTIONS - no auth checks, protected by frontend password gate
@@ -564,4 +624,3 @@ actor {
     { currentStreak = streak; nextMilestone; daysToNext };
   };
 };
-

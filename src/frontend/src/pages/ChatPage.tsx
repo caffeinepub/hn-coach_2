@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from "date-fns";
 import {
+  Bell,
+  BellOff,
   Camera,
   ChevronDown,
   ChevronUp,
@@ -14,6 +16,7 @@ import {
   Send,
   Star,
   Trophy,
+  X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -484,6 +487,77 @@ function BonusPointsGuide() {
   );
 }
 
+// Notification permission banner for users
+function NotificationPermissionBanner() {
+  const [permState, setPermState] = useState<NotificationPermission | null>(
+    null,
+  );
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof Notification !== "undefined") {
+      setPermState(Notification.permission);
+    }
+  }, []);
+
+  if (
+    dismissed ||
+    permState !== "default" ||
+    typeof Notification === "undefined"
+  ) {
+    return null;
+  }
+
+  const handleEnable = async () => {
+    const result = await Notification.requestPermission();
+    setPermState(result);
+    if (result === "granted") {
+      toast.success(
+        "Notifications enabled! You'll be alerted when your coach replies.",
+      );
+    }
+    setDismissed(true);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.3 }}
+      className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4"
+      style={{
+        background: "rgba(7,24,36,0.9)",
+        border: "1px solid rgba(255,106,0,0.4)",
+      }}
+      data-ocid="chat.notification_banner"
+    >
+      <Bell className="w-4 h-4 flex-shrink-0" style={{ color: "#FF6A00" }} />
+      <p className="text-sm text-white flex-1">
+        Enable notifications to be alerted when your coach replies
+      </p>
+      <Button
+        size="sm"
+        onClick={handleEnable}
+        className="text-xs font-semibold flex-shrink-0 h-8 px-3"
+        style={{ background: "#FF6A00", color: "white" }}
+        data-ocid="chat.notification_enable.button"
+      >
+        Enable
+      </Button>
+      <button
+        type="button"
+        onClick={() => setDismissed(true)}
+        className="flex-shrink-0 hover:opacity-80 transition-opacity"
+        aria-label="Dismiss"
+        data-ocid="chat.notification_banner.close_button"
+      >
+        <X className="w-4 h-4" style={{ color: "#A8B6C3" }} />
+      </button>
+    </motion.div>
+  );
+}
+
 export function ChatPage() {
   const { data: messages, isLoading } = useGetMessageHistory();
   const sendMessage = useSendMessageToCoach();
@@ -500,6 +574,9 @@ export function ChatPage() {
   const hasMarkedRef = useRef(false);
   const markAsReadRef = useRef(markAsRead.mutate);
   markAsReadRef.current = markAsRead.mutate;
+
+  // Track previous message count for push notifications
+  const prevMessageCountRef = useRef<number>(0);
 
   useEffect(() => {
     if (!actor || isFetching) return;
@@ -527,6 +604,40 @@ export function ChatPage() {
       hasMarkedRef.current = true;
       markAsReadRef.current();
     }
+  }, [messages]);
+
+  // Browser push notifications when new coach messages arrive while tab is hidden
+  useEffect(() => {
+    if (!messages) return;
+
+    const currentCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+
+    if (currentCount > prevCount && prevCount > 0) {
+      // Check if new messages were sent by coach
+      const newMessages = messages.slice(prevCount);
+      const hasNewCoachMsg = newMessages.some(
+        (m) => m.senderRole === SenderRole.coach,
+      );
+
+      if (
+        hasNewCoachMsg &&
+        document.hidden &&
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted"
+      ) {
+        try {
+          new Notification("HN Coach", {
+            body: "You have a new message from your coach!",
+            icon: "/assets/favicon.ico",
+          });
+        } catch {
+          // Notifications might not be supported in all environments
+        }
+      }
+    }
+
+    prevMessageCountRef.current = currentCount;
   }, [messages]);
 
   useEffect(() => {
@@ -671,6 +782,11 @@ export function ChatPage() {
                 </span>
               </div>
             </div>
+
+            {/* Notification permission banner */}
+            <AnimatePresence>
+              <NotificationPermissionBanner />
+            </AnimatePresence>
 
             {/* Points summary card */}
             <PointsSummaryCard />

@@ -1,42 +1,44 @@
 # HN Coach
 
 ## Current State
-- Backend: `PointRecord` has `{ points: Nat; reason: PointReason; timestamp: Int }` -- no `remark` field.
-- Backend: `givePoints(user, points, reason)` -- no remark parameter.
-- Backend: `getCallerPointHistory()` returns full history for the user (caller).
-- Backend: No admin-facing `getUserPointHistory(user)` function.
-- Frontend (ChatPage): Shows total points summary card, streak tracker, and bonus points guide. No today's points card, no history list.
-- Frontend (AdminPage): PointsBar shows total points and a points input form with category selector. No remark field, no history view.
+
+The app has a fully working chat system between users and the coach:
+- Messages are stored in `chatStore` (Map<Principal, MessageHistory>) in the Motoko backend
+- `lastReadTimestamps` map tracks when each user last read their messages
+- `markMessagesAsRead()` is called by users when opening chat
+- `getLastReadTimestamp(user)` is used by admin to show tick indicators (sent/delivered/read)
+- Frontend polls every 5 seconds for new messages on both user and admin sides
+- No push notifications exist — no service worker, no VAPID, no subscription management
+- Admin client list shows user names but no unread badges
+- User side shows no unread count/badge
 
 ## Requested Changes (Diff)
 
 ### Add
-- `remark: Text` field to `PointRecord` type in Motoko backend.
-- `remark` parameter to `givePoints(user, points, reason, remark)` backend function.
-- `getUserPointHistory(user: Principal)` admin-facing backend query (no auth check, protected by frontend password).
-- **Today's Points Card** on `ChatPage`: A separate badge/card showing total points earned today (sum of all PointRecords where timestamp is within current calendar day).
-- **Points History List** on `ChatPage`: A scrollable list below (or near) the points summary showing each PointRecord with date, category label, amount, and remark.
-- **Remark text input** in AdminPage PointsBar when awarding points: a text field for the coach to type the activity/reason remark.
-- **Points History section** in AdminPage per selected client: scrollable list of that client's point records (date, category, amount, remark), fetched via `getUserPointHistory`.
-- When coach awards points, also send a chat message to the user as a system bubble: "You earned {points} pts — {Category}: {remark}". This calls `sendMessageToUser` with a special formatted message.
+- **Backend**: New `getCoachUnreadCountForUser(user: Principal)` query — counts messages from coach (senderRole == #coach) with timestamp > lastReadTimestamp for that user, so admin can see unread count per client
+- **Backend**: New `getUserUnreadCount()` query for the caller — counts messages from coach that the user hasn't read yet
+- **Backend**: New `markCoachMessagesAsReadForAdmin()` call — so coach can mark messages as read on their end (track coach's read state per user separately)
+- **Frontend**: Service worker (`public/sw.js`) to handle browser push notifications via the Web Notifications API (not server-sent — we use polling to detect new messages and trigger local notifications)
+- **Frontend**: `useNotifications` hook — requests browser notification permission on first use, and when polling detects new messages arrived since last check, fires a browser Notification
+- **Frontend**: Unread badge on admin client list — each UserListItem shows a red dot/count if there are coach-to-user messages that the user hasn't read (uses getCoachUnreadCountForUser logic derived from polling data)
+- **Frontend**: Unread badge for users — on the NavBar or chat header, show badge with count of unread coach messages
 
 ### Modify
-- `givePoints` frontend call in AdminPage must pass the new `remark` parameter.
-- `PointRecord` TypeScript interface to include `remark: string`.
-- `getCallerPointHistory` on ChatPage to use the updated PointRecord with remark.
+- **ChatPage.tsx**: On message poll, compare new messages to previous count; if new coach messages arrived and user is not on chat page (document.hidden or page not active), fire a browser notification
+- **AdminPage.tsx**: UserListItem — add unread badge. Compute unread by filtering messages for that user where senderRole==#coach and timestamp > lastReadTimestamp
+- **useQueries.ts**: Add `useGetUserUnreadCount` and `useGetAllUsersUnreadCounts` hooks
+- **NavBar.tsx**: Show unread message badge if there are unread coach messages for current user
 
 ### Remove
-- Nothing removed.
+- Nothing removed
 
 ## Implementation Plan
-1. Update `PointRecord` type in `main.mo` to add `remark: Text`.
-2. Update `givePoints` function signature in `main.mo` to accept `remark: Text` and store it.
-3. Add `getUserPointHistory(user: Principal)` admin query function in `main.mo`.
-4. Regenerate frontend bindings (`backend.d.ts`) via Motoko code generation.
-5. In `ChatPage.tsx`:
-   a. Add "Today's Points" card: compute today's total by filtering `getCallerPointHistory()` records by today's date.
-   b. Add "Points History" collapsible/scrollable section listing all records with date, category, points, remark.
-6. In `AdminPage.tsx`:
-   a. Add remark text input to the points award form in PointsBar.
-   b. After awarding points, also call `sendMessageToUser` with the formatted notification bubble.
-   c. Add points history section per client showing their history from `getUserPointHistory`.
+
+1. Add `getUserUnreadCount()` query to Motoko backend (caller-based, counts unread coach messages for the user)
+2. Add `getCoachUnreadCountForUser(user: Principal)` query to Motoko backend (for admin panel to show per-client unread counts)
+3. Update `backend.d.ts` and declarations with new methods
+4. Add notification permission request and local notification firing logic in ChatPage.tsx (on poll when new messages arrive and tab is not active)
+5. Add notification logic in AdminPage.tsx (when new messages arrive from any user and admin is not on that user's conversation)
+6. Add unread badge to admin client list (UserListItem in AdminPage.tsx) using lastReadTimestamp vs message timestamps
+7. Add unread badge to user NavBar or chat header using getUserUnreadCount
+8. Add `useGetUserUnreadCount` hook to useQueries.ts

@@ -16,6 +16,7 @@ import type { Principal } from "@icp-sdk/core/principal";
 import { format } from "date-fns";
 import {
   AlertCircle,
+  Bell,
   Check,
   CheckCheck,
   Dumbbell,
@@ -28,6 +29,7 @@ import {
   Send,
   Star,
   Users,
+  X,
   XCircle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -47,12 +49,14 @@ import {
   useAdminCancelBooking,
   useGetAllBookings,
   useGetAllUsers,
+  useGetCoachUnreadCount,
   useGetLastReadTimestamp,
   useGetUserMessageHistoryAdmin,
   useGetUserPointHistory,
   useGetUserPoints,
   useGetUserProfile,
   useGivePoints,
+  useMarkCoachReadForUser,
   useSendMessageToUser,
 } from "../hooks/useQueries";
 import { StorageClient } from "../utils/StorageClient";
@@ -169,8 +173,11 @@ function UserListItem({
   onClick: () => void;
 }) {
   const { data: profile } = useGetUserProfile(principal);
+  const { data: unreadCount } = useGetCoachUnreadCount(principal);
   const shortId = `${principal.toString().slice(0, 12)}...`;
   const displayName = profile?.name || `User: ${shortId}`;
+  const hasUnread = unreadCount !== undefined && unreadCount > BigInt(0);
+  const unreadNum = hasUnread ? Number(unreadCount) : 0;
 
   return (
     <button
@@ -190,7 +197,7 @@ function UserListItem({
       >
         {(profile?.name?.[0] || "U").toUpperCase()}
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-white truncate">{displayName}</p>
         {profile?.name && (
           <p className="text-xs truncate" style={{ color: "#A8B6C3" }}>
@@ -198,6 +205,16 @@ function UserListItem({
           </p>
         )}
       </div>
+      {/* Unread badge */}
+      {hasUnread && (
+        <span
+          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+          style={{ background: "#ef4444" }}
+          data-ocid="admin.user.unread_badge"
+        >
+          {unreadNum > 99 ? "99+" : unreadNum}
+        </span>
+      )}
     </button>
   );
 }
@@ -459,6 +476,77 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
   );
 }
 
+// Admin notification permission banner
+function AdminNotificationBanner() {
+  const [permState, setPermState] = useState<NotificationPermission | null>(
+    null,
+  );
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof Notification !== "undefined") {
+      setPermState(Notification.permission);
+    }
+  }, []);
+
+  if (
+    dismissed ||
+    permState !== "default" ||
+    typeof Notification === "undefined"
+  ) {
+    return null;
+  }
+
+  const handleEnable = async () => {
+    const result = await Notification.requestPermission();
+    setPermState(result);
+    if (result === "granted") {
+      toast.success(
+        "Notifications enabled! You'll be alerted when clients message you.",
+      );
+    }
+    setDismissed(true);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.3 }}
+      className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4"
+      style={{
+        background: "rgba(7,24,36,0.9)",
+        border: "1px solid rgba(255,106,0,0.4)",
+      }}
+      data-ocid="admin.notification_banner"
+    >
+      <Bell className="w-4 h-4 flex-shrink-0" style={{ color: "#FF6A00" }} />
+      <p className="text-sm text-white flex-1">
+        Enable notifications to be alerted when clients send new messages
+      </p>
+      <Button
+        size="sm"
+        onClick={handleEnable}
+        className="text-xs font-semibold flex-shrink-0 h-8 px-3"
+        style={{ background: "#FF6A00", color: "white" }}
+        data-ocid="admin.notification_enable.button"
+      >
+        Enable
+      </Button>
+      <button
+        type="button"
+        onClick={() => setDismissed(true)}
+        className="flex-shrink-0 hover:opacity-80 transition-opacity"
+        aria-label="Dismiss"
+        data-ocid="admin.notification_banner.close_button"
+      >
+        <X className="w-4 h-4" style={{ color: "#A8B6C3" }} />
+      </button>
+    </motion.div>
+  );
+}
+
 function ConversationPanel({
   selectedUser,
   storageClient,
@@ -476,12 +564,48 @@ function ConversationPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Track previous message count for push notifications
+  const prevMessageCountRef = useRef<number>(0);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Browser push notifications when new user messages arrive
+  useEffect(() => {
+    if (!messages) return;
+
+    const currentCount = messages.length;
+    const prevCount = prevMessageCountRef.current;
+
+    if (currentCount > prevCount && prevCount > 0) {
+      const newMessages = messages.slice(prevCount);
+      const hasNewUserMsg = newMessages.some(
+        (m) => m.senderRole === SenderRole.user,
+      );
+
+      if (
+        hasNewUserMsg &&
+        typeof Notification !== "undefined" &&
+        Notification.permission === "granted"
+      ) {
+        const displayName = profile?.name || "A client";
+        try {
+          new Notification("HN Coach", {
+            body: `New message from ${displayName}`,
+            icon: "/assets/favicon.ico",
+          });
+        } catch {
+          // Notifications might not be supported in all environments
+        }
+      }
+    }
+
+    prevMessageCountRef.current = currentCount;
+  }, [messages, profile?.name]);
 
   const handleSendReply = async (
     text?: string,
@@ -975,62 +1099,79 @@ function MessagesTab({
 }: { storageClient: StorageClient | null }) {
   const { data: users, isLoading: usersLoading } = useGetAllUsers();
   const [selectedUser, setSelectedUser] = useState<Principal | null>(null);
+  const markCoachRead = useMarkCoachReadForUser();
+
+  const handleSelectUser = (u: Principal) => {
+    setSelectedUser(u);
+    // Mark messages as read for this user when coach opens conversation
+    markCoachRead.mutate(u);
+  };
 
   return (
-    <div
-      className="flex h-full min-h-[500px] rounded-xl overflow-hidden border"
-      style={{ borderColor: "#203B4D" }}
-      data-ocid="admin.messages.panel"
-    >
-      <div
-        className="w-64 flex-shrink-0 border-r flex flex-col"
-        style={{ borderColor: "#203B4D", background: "#0D2030" }}
-      >
-        <div className="px-4 py-3 border-b" style={{ borderColor: "#203B4D" }}>
-          <p className="text-sm font-semibold text-white">Users</p>
-          <p className="text-xs mt-0.5" style={{ color: "#A8B6C3" }}>
-            {users?.length ?? 0} total
-          </p>
-        </div>
-        <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
-            {usersLoading ? (
-              <div
-                className="flex justify-center py-8"
-                data-ocid="admin.users.loading_state"
-              >
-                <Loader2
-                  className="w-5 h-5 animate-spin"
-                  style={{ color: "#FF6A00" }}
-                />
-              </div>
-            ) : !users || users.length === 0 ? (
-              <div
-                className="text-center py-8"
-                data-ocid="admin.users.empty_state"
-              >
-                <p className="text-sm" style={{ color: "#A8B6C3" }}>
-                  No users yet
-                </p>
-              </div>
-            ) : (
-              users.map((u: Principal) => (
-                <UserListItem
-                  key={u.toString()}
-                  principal={u}
-                  isSelected={selectedUser?.toString() === u.toString()}
-                  onClick={() => setSelectedUser(u)}
-                />
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </div>
+    <div>
+      {/* Notification permission banner for coach */}
+      <AnimatePresence>
+        <AdminNotificationBanner />
+      </AnimatePresence>
 
-      <ConversationPanel
-        selectedUser={selectedUser}
-        storageClient={storageClient}
-      />
+      <div
+        className="flex h-full min-h-[500px] rounded-xl overflow-hidden border"
+        style={{ borderColor: "#203B4D" }}
+        data-ocid="admin.messages.panel"
+      >
+        <div
+          className="w-64 flex-shrink-0 border-r flex flex-col"
+          style={{ borderColor: "#203B4D", background: "#0D2030" }}
+        >
+          <div
+            className="px-4 py-3 border-b"
+            style={{ borderColor: "#203B4D" }}
+          >
+            <p className="text-sm font-semibold text-white">Users</p>
+            <p className="text-xs mt-0.5" style={{ color: "#A8B6C3" }}>
+              {users?.length ?? 0} total
+            </p>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-2 space-y-1">
+              {usersLoading ? (
+                <div
+                  className="flex justify-center py-8"
+                  data-ocid="admin.users.loading_state"
+                >
+                  <Loader2
+                    className="w-5 h-5 animate-spin"
+                    style={{ color: "#FF6A00" }}
+                  />
+                </div>
+              ) : !users || users.length === 0 ? (
+                <div
+                  className="text-center py-8"
+                  data-ocid="admin.users.empty_state"
+                >
+                  <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                    No users yet
+                  </p>
+                </div>
+              ) : (
+                users.map((u: Principal) => (
+                  <UserListItem
+                    key={u.toString()}
+                    principal={u}
+                    isSelected={selectedUser?.toString() === u.toString()}
+                    onClick={() => handleSelectUser(u)}
+                  />
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        <ConversationPanel
+          selectedUser={selectedUser}
+          storageClient={storageClient}
+        />
+      </div>
     </div>
   );
 }

@@ -4,13 +4,19 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Dumbbell, LogOut } from "lucide-react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useGetCallerUserProfile } from "../hooks/useQueries";
+import {
+  useGetCallerUnreadCount,
+  useGetCallerUserProfile,
+} from "../hooks/useQueries";
 
 export function NavBar() {
   const { clear, identity } = useInternetIdentity();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { data: profile } = useGetCallerUserProfile();
+  const { data: unreadCount } = useGetCallerUnreadCount();
+
+  const hasUnread = unreadCount !== undefined && unreadCount > BigInt(0);
 
   const handleLogout = async () => {
     await clear();
@@ -61,23 +67,35 @@ export function NavBar() {
               className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
               data-ocid="nav.profile.link"
             >
-              <Avatar
-                className="w-8 h-8 border-2"
-                style={{ borderColor: "#FF6A00" }}
-              >
-                {avatarUrl && (
-                  <AvatarImage
-                    src={avatarUrl}
-                    alt={profile?.name || "Avatar"}
+              {/* Avatar with unread badge */}
+              <div className="relative">
+                <Avatar
+                  className="w-8 h-8 border-2"
+                  style={{ borderColor: "#FF6A00" }}
+                >
+                  {avatarUrl && (
+                    <AvatarImage
+                      src={avatarUrl}
+                      alt={profile?.name || "Avatar"}
+                    />
+                  )}
+                  <AvatarFallback
+                    className="text-xs font-bold text-white"
+                    style={{ background: "#1A3A4F" }}
+                  >
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Unread message dot badge */}
+                {hasUnread && (
+                  <span
+                    className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2"
+                    style={{ background: "#ef4444", borderColor: "#071824" }}
+                    aria-label="Unread messages"
+                    data-ocid="nav.unread_badge"
                   />
                 )}
-                <AvatarFallback
-                  className="text-xs font-bold text-white"
-                  style={{ background: "#1A3A4F" }}
-                >
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              </div>
               {profile?.name && (
                 <span className="hidden sm:block text-sm font-medium text-white">
                   {profile.name}
