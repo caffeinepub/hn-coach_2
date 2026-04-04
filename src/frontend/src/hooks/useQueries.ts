@@ -310,15 +310,16 @@ export function useMarkCoachReadForUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (user: Principal) => {
-      if (!actor) throw new Error("Actor not available");
+      if (!actor) return; // silently skip if actor not ready
       try {
         await (actor as any).markCoachReadForUser(user);
       } catch {
-        // silently ignore if not implemented yet
+        // silently ignore errors
       }
     },
     onSuccess: (_data, user) => {
-      queryClient.invalidateQueries({
+      // Force immediate refetch so badge disappears right away
+      queryClient.refetchQueries({
         queryKey: ["coachUnreadCount", user.toString()],
       });
     },

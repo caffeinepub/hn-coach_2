@@ -19,6 +19,7 @@ import {
   Bell,
   Check,
   CheckCheck,
+  ChevronLeft,
   Dumbbell,
   FileText,
   History,
@@ -33,7 +34,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   BookingStatus,
@@ -292,7 +293,7 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
       data-ocid="admin.points.panel"
     >
       {/* Top row: total + give points form */}
-      <div className="px-3 py-2 flex flex-wrap items-center gap-2">
+      <div className="px-3 py-2 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
         {/* Total display */}
         <div
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg flex-shrink-0"
@@ -335,18 +336,17 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
         </button>
 
         {/* Custom points input + remark */}
-        <div className="flex items-center gap-1.5 ml-auto flex-wrap justify-end">
+        <div className="flex flex-col gap-1.5 w-full sm:flex-row sm:flex-wrap sm:items-center sm:w-auto sm:ml-auto">
           <input
             type="text"
             value={remark}
             onChange={(e) => setRemark(e.target.value)}
             placeholder="Remark / Activity"
-            className="h-7 px-2 rounded-lg text-xs text-white outline-none border"
+            className="w-full sm:flex-1 sm:min-w-0 h-9 sm:h-7 px-2 rounded-lg text-xs text-white outline-none border"
             style={{
               background: "#1A3A4F",
               borderColor: "rgba(255,106,0,0.25)",
               color: "white",
-              width: "140px",
             }}
             data-ocid="admin.points.remark_input"
           />
@@ -357,7 +357,7 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
             onChange={(e) => setCustomPoints(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCustomGive()}
             placeholder="pts"
-            className="w-14 h-7 px-2 rounded-lg text-xs text-white outline-none border text-center"
+            className="w-full sm:w-14 h-9 sm:h-7 px-2 rounded-lg text-xs text-white outline-none border text-center"
             style={{
               background: "#1A3A4F",
               borderColor: "rgba(255,106,0,0.3)",
@@ -369,7 +369,7 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
             type="button"
             onClick={handleCustomGive}
             disabled={isGiving || !customPoints || Number(customPoints) < 1}
-            className="h-7 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-40"
+            className="w-full sm:w-auto h-9 sm:h-7 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-40 min-h-[44px] sm:min-h-0"
             style={{ background: "#FF6A00" }}
             data-ocid="admin.points.submit_button"
           >
@@ -550,9 +550,11 @@ function AdminNotificationBanner() {
 function ConversationPanel({
   selectedUser,
   storageClient,
+  onBack,
 }: {
   selectedUser: Principal | null;
   storageClient: StorageClient | null;
+  onBack?: () => void;
 }) {
   const { data: profile } = useGetUserProfile(selectedUser);
   const { data: messages, isLoading } =
@@ -589,6 +591,7 @@ function ConversationPanel({
 
       if (
         hasNewUserMsg &&
+        document.hidden &&
         typeof Notification !== "undefined" &&
         Notification.permission === "granted"
       ) {
@@ -596,7 +599,6 @@ function ConversationPanel({
         try {
           new Notification("HN Coach", {
             body: `New message from ${displayName}`,
-            icon: "/assets/favicon.ico",
           });
         } catch {
           // Notifications might not be supported in all environments
@@ -720,14 +722,28 @@ function ConversationPanel({
     profile?.name || `User: ${selectedUser.toString().slice(0, 12)}...`;
 
   return (
-    <div className="flex-1 flex flex-col" style={{ background: "#112A3A" }}>
+    <div
+      className="flex-1 flex flex-col h-full"
+      style={{ background: "#112A3A" }}
+    >
       {/* Conversation header */}
       <div
         className="px-4 py-3 border-b flex items-center gap-3"
         style={{ borderColor: "#203B4D", background: "#0D2030" }}
       >
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:opacity-80 transition-opacity flex-shrink-0"
+            style={{ background: "rgba(255,106,0,0.12)", color: "#FF6A00" }}
+            aria-label="Back to user list"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
         <div
-          className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+          className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
           style={{ background: "#FF6A00" }}
         >
           {(profile?.name?.[0] || "U").toUpperCase()}
@@ -749,7 +765,7 @@ function ConversationPanel({
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-3"
-        style={{ maxHeight: "calc(100vh - 420px)" }}
+        style={{ minHeight: 0 }}
         data-ocid="admin.messages.panel"
       >
         {isLoading ? (
@@ -995,88 +1011,176 @@ function BookingsTab() {
   }
 
   return (
-    <div
-      className="rounded-xl overflow-hidden border"
-      style={{ borderColor: "#203B4D" }}
-      data-ocid="admin.bookings.table"
-    >
-      <Table>
-        <TableHeader>
-          <TableRow style={{ background: "#0D2030", borderColor: "#203B4D" }}>
-            <TableHead className="text-white font-semibold">User</TableHead>
-            <TableHead className="text-white font-semibold">Date</TableHead>
-            <TableHead className="text-white font-semibold">Time</TableHead>
-            <TableHead className="text-white font-semibold">Status</TableHead>
-            <TableHead className="text-white font-semibold">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedBookings.map((booking: Booking, idx: number) => (
-            <TableRow
-              key={booking.id.toString()}
-              style={{
-                borderColor: "#203B4D",
-                background: idx % 2 === 0 ? "#112A3A" : "#0F2535",
-              }}
-              data-ocid={`admin.bookings.row.${idx + 1}`}
-            >
-              <TableCell>
-                <BookingUserCell user={booking.user} />
-              </TableCell>
-              <TableCell className="text-white">{booking.date}</TableCell>
-              <TableCell className="text-white">{booking.timeSlot}</TableCell>
-              <TableCell>
-                <Badge
-                  className="font-semibold text-xs"
+    <>
+      {/* Desktop table view */}
+      <div
+        className="hidden md:block overflow-x-auto rounded-xl border"
+        style={{ borderColor: "#203B4D" }}
+        data-ocid="admin.bookings.table"
+      >
+        <div className="min-w-[600px]">
+          <Table>
+            <TableHeader>
+              <TableRow
+                style={{ background: "#0D2030", borderColor: "#203B4D" }}
+              >
+                <TableHead className="text-white font-semibold">User</TableHead>
+                <TableHead className="text-white font-semibold">Date</TableHead>
+                <TableHead className="text-white font-semibold">Time</TableHead>
+                <TableHead className="text-white font-semibold">
+                  Status
+                </TableHead>
+                <TableHead className="text-white font-semibold">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedBookings.map((booking: Booking, idx: number) => (
+                <TableRow
+                  key={booking.id.toString()}
                   style={{
-                    background:
-                      booking.status === BookingStatus.booked
-                        ? "rgba(34,197,94,0.15)"
-                        : "rgba(239,68,68,0.15)",
-                    color:
-                      booking.status === BookingStatus.booked
-                        ? "#4ade80"
-                        : "#f87171",
-                    border: `1px solid ${
-                      booking.status === BookingStatus.booked
-                        ? "rgba(74,222,128,0.3)"
-                        : "rgba(248,113,113,0.3)"
-                    }`,
+                    borderColor: "#203B4D",
+                    background: idx % 2 === 0 ? "#112A3A" : "#0F2535",
                   }}
+                  data-ocid={`admin.bookings.row.${idx + 1}`}
                 >
-                  {booking.status === BookingStatus.booked
-                    ? "Booked"
-                    : "Cancelled"}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                {booking.status === BookingStatus.booked && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleCancel(booking.id)}
-                    disabled={cancelBooking.isPending}
-                    className="text-xs font-semibold h-7 px-3"
-                    style={{
-                      background: "rgba(239,68,68,0.15)",
-                      border: "1px solid rgba(248,113,113,0.3)",
-                      color: "#f87171",
-                    }}
-                    data-ocid={`admin.bookings.delete_button.${idx + 1}`}
-                  >
-                    {cancelBooking.isPending ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <XCircle className="w-3 h-3 mr-1" />
+                  <TableCell>
+                    <BookingUserCell user={booking.user} />
+                  </TableCell>
+                  <TableCell className="text-white">{booking.date}</TableCell>
+                  <TableCell className="text-white">
+                    {booking.timeSlot}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className="font-semibold text-xs"
+                      style={{
+                        background:
+                          booking.status === BookingStatus.booked
+                            ? "rgba(34,197,94,0.15)"
+                            : "rgba(239,68,68,0.15)",
+                        color:
+                          booking.status === BookingStatus.booked
+                            ? "#4ade80"
+                            : "#f87171",
+                        border: `1px solid ${
+                          booking.status === BookingStatus.booked
+                            ? "rgba(74,222,128,0.3)"
+                            : "rgba(248,113,113,0.3)"
+                        }`,
+                      }}
+                    >
+                      {booking.status === BookingStatus.booked
+                        ? "Booked"
+                        : "Cancelled"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {booking.status === BookingStatus.booked && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleCancel(booking.id)}
+                        disabled={cancelBooking.isPending}
+                        className="text-xs font-semibold h-7 px-3"
+                        style={{
+                          background: "rgba(239,68,68,0.15)",
+                          border: "1px solid rgba(248,113,113,0.3)",
+                          color: "#f87171",
+                        }}
+                        data-ocid={`admin.bookings.delete_button.${idx + 1}`}
+                      >
+                        {cancelBooking.isPending ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <XCircle className="w-3 h-3 mr-1" />
+                        )}
+                        Cancel
+                      </Button>
                     )}
-                    Cancel
-                  </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Mobile card list view */}
+      <div className="md:hidden space-y-3" data-ocid="admin.bookings.list">
+        {sortedBookings.map((booking: Booking, idx: number) => (
+          <div
+            key={booking.id.toString()}
+            className="rounded-xl p-4 border"
+            style={{ background: "#112A3A", borderColor: "#203B4D" }}
+            data-ocid={`admin.bookings.item.${idx + 1}`}
+          >
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <BookingUserCell user={booking.user} />
+              <Badge
+                className="font-semibold text-xs flex-shrink-0"
+                style={{
+                  background:
+                    booking.status === BookingStatus.booked
+                      ? "rgba(34,197,94,0.15)"
+                      : "rgba(239,68,68,0.15)",
+                  color:
+                    booking.status === BookingStatus.booked
+                      ? "#4ade80"
+                      : "#f87171",
+                  border: `1px solid ${
+                    booking.status === BookingStatus.booked
+                      ? "rgba(74,222,128,0.3)"
+                      : "rgba(248,113,113,0.3)"
+                  }`,
+                }}
+              >
+                {booking.status === BookingStatus.booked
+                  ? "Booked"
+                  : "Cancelled"}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-4 mb-3">
+              <div>
+                <p className="text-xs mb-0.5" style={{ color: "#A8B6C3" }}>
+                  Date
+                </p>
+                <p className="text-sm font-medium text-white">{booking.date}</p>
+              </div>
+              <div>
+                <p className="text-xs mb-0.5" style={{ color: "#A8B6C3" }}>
+                  Time
+                </p>
+                <p className="text-sm font-medium text-white">
+                  {booking.timeSlot}
+                </p>
+              </div>
+            </div>
+            {booking.status === BookingStatus.booked && (
+              <Button
+                size="sm"
+                onClick={() => handleCancel(booking.id)}
+                disabled={cancelBooking.isPending}
+                className="w-full h-10 text-sm font-semibold"
+                style={{
+                  background: "rgba(239,68,68,0.15)",
+                  border: "1px solid rgba(248,113,113,0.3)",
+                  color: "#f87171",
+                }}
+                data-ocid={`admin.bookings.delete_button.${idx + 1}`}
+              >
+                {cancelBooking.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <XCircle className="w-4 h-4 mr-2" />
                 )}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+                Cancel Booking
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -1094,17 +1198,103 @@ function BookingUserCell({ user }: { user: Principal }) {
   );
 }
 
+// Polls unread counts for ALL users and fires browser notifications for new messages
+// This runs regardless of which conversation is open
+function useAdminNotificationWatcher(users: Principal[] | undefined) {
+  const { actor } = useActor();
+  const prevUnreadRef = useRef<Record<string, number>>({});
+
+  const checkUnreads = useCallback(async () => {
+    if (!actor || !users || users.length === 0) return;
+    if (
+      typeof Notification === "undefined" ||
+      Notification.permission !== "granted"
+    )
+      return;
+
+    for (const user of users) {
+      const key = user.toString();
+      try {
+        const count = Number(
+          await (actor as any).getCoachUnreadCountForUser(user),
+        );
+        const prev = prevUnreadRef.current[key] ?? 0;
+        if (
+          count > prev &&
+          prev >= 0 &&
+          prevUnreadRef.current[key] !== undefined
+        ) {
+          // New unread messages arrived for this user
+          if (document.hidden) {
+            try {
+              new Notification("HN Coach", {
+                body: "New message from a client",
+              });
+            } catch {
+              // ignore
+            }
+          }
+        }
+        prevUnreadRef.current[key] = count;
+      } catch {
+        // ignore per-user errors
+      }
+    }
+  }, [actor, users]);
+
+  useEffect(() => {
+    // Do an initial pass to populate prevUnreadRef without triggering notifications
+    if (!actor || !users || users.length === 0) return;
+    (async () => {
+      for (const user of users) {
+        const key = user.toString();
+        if (prevUnreadRef.current[key] === undefined) {
+          try {
+            const count = Number(
+              await (actor as any).getCoachUnreadCountForUser(user),
+            );
+            prevUnreadRef.current[key] = count;
+          } catch {
+            prevUnreadRef.current[key] = 0;
+          }
+        }
+      }
+    })();
+  }, [actor, users]);
+
+  useEffect(() => {
+    const interval = setInterval(checkUnreads, 5000);
+    return () => clearInterval(interval);
+  }, [checkUnreads]);
+}
+
 function MessagesTab({
   storageClient,
 }: { storageClient: StorageClient | null }) {
   const { data: users, isLoading: usersLoading } = useGetAllUsers();
   const [selectedUser, setSelectedUser] = useState<Principal | null>(null);
   const markCoachRead = useMarkCoachReadForUser();
+  // Global notification watcher - fires for any user, even when not in their conversation
+  useAdminNotificationWatcher(users);
+
+  // Continuously mark messages as read while a conversation is open
+  // This ensures new messages that arrive while coach is viewing also get cleared
+  const markCoachReadRef = useRef(markCoachRead.mutate);
+  markCoachReadRef.current = markCoachRead.mutate;
+
+  useEffect(() => {
+    if (!selectedUser) return;
+    // Mark immediately when user is selected
+    markCoachReadRef.current(selectedUser);
+    // Keep marking every 4 seconds while conversation is open
+    const interval = setInterval(() => {
+      markCoachReadRef.current(selectedUser);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [selectedUser]);
 
   const handleSelectUser = (u: Principal) => {
     setSelectedUser(u);
-    // Mark messages as read for this user when coach opens conversation
-    markCoachRead.mutate(u);
   };
 
   return (
@@ -1115,12 +1305,12 @@ function MessagesTab({
       </AnimatePresence>
 
       <div
-        className="flex h-full min-h-[500px] rounded-xl overflow-hidden border"
+        className="flex flex-col md:flex-row h-[calc(100vh-200px)] min-h-[400px] rounded-xl overflow-hidden border"
         style={{ borderColor: "#203B4D" }}
         data-ocid="admin.messages.panel"
       >
         <div
-          className="w-64 flex-shrink-0 border-r flex flex-col"
+          className={`${selectedUser ? "hidden md:flex" : "flex"} md:w-64 w-full flex-shrink-0 border-r flex-col`}
           style={{ borderColor: "#203B4D", background: "#0D2030" }}
         >
           <div
@@ -1167,10 +1357,15 @@ function MessagesTab({
           </ScrollArea>
         </div>
 
-        <ConversationPanel
-          selectedUser={selectedUser}
-          storageClient={storageClient}
-        />
+        <div
+          className={`${selectedUser ? "flex" : "hidden md:flex"} flex-1 flex-col`}
+        >
+          <ConversationPanel
+            selectedUser={selectedUser}
+            storageClient={storageClient}
+            onBack={() => setSelectedUser(null)}
+          />
+        </div>
       </div>
     </div>
   );
@@ -1400,7 +1595,7 @@ function AdminPanel() {
                 HN<span style={{ color: "#FF6A00" }}> Coach</span>
               </span>
               <span
-                className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-widest"
+                className="hidden sm:inline-block ml-2 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-widest"
                 style={{
                   background: "rgba(255,106,0,0.15)",
                   color: "#FF6A00",
@@ -1416,17 +1611,18 @@ function AdminPanel() {
                 localStorage.removeItem(ADMIN_AUTH_KEY);
                 window.location.reload();
               }}
-              className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:opacity-80"
+              className="text-sm font-medium px-3 sm:px-4 py-2 rounded-lg transition-colors hover:opacity-80 min-h-[40px] flex items-center gap-1.5"
               style={{ color: "#A8B6C3", border: "1px solid #203B4D" }}
               data-ocid="admin.logout.button"
             >
-              Sign Out
+              <span className="hidden sm:inline">Sign Out</span>
+              <span className="sm:hidden">Out</span>
             </button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 md:py-8">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
