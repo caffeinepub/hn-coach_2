@@ -15,6 +15,11 @@ export interface Booking {
     timestamp: bigint;
     timeSlot: string;
 }
+export interface StreakInfo {
+    daysToNext: bigint;
+    nextMilestone: bigint;
+    currentStreak: bigint;
+}
 export interface Message {
     messageType: MessageType;
     message: string;
@@ -23,6 +28,7 @@ export interface Message {
     senderRole: SenderRole;
 }
 export interface PointRecord {
+    remark: string;
     timestamp: bigint;
     points: bigint;
     reason: PointReason;
@@ -36,11 +42,6 @@ export interface UserProfile {
     email: string;
     targetGoal: string;
     avatarBlobId?: string;
-}
-export interface StreakInfo {
-    currentStreak: bigint;
-    nextMilestone: bigint;
-    daysToNext: bigint;
 }
 export enum BookingStatus {
     cancelled = "cancelled",
@@ -88,9 +89,10 @@ export interface backendInterface {
     getMessageHistory(): Promise<Array<Message>>;
     getUserBookings(): Promise<Array<Booking>>;
     getUserMessageHistory(user: Principal): Promise<Array<Message>>;
+    getUserPointHistory(user: Principal): Promise<Array<PointRecord>>;
     getUserPoints(user: Principal): Promise<bigint>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    givePoints(user: Principal, points: bigint, reason: PointReason): Promise<bigint>;
+    givePoints(user: Principal, points: bigint, reason: PointReason, remark: string): Promise<bigint>;
     isCallerAdmin(): Promise<boolean>;
     markMessagesAsRead(): Promise<void>;
     recordActivity(): Promise<void>;

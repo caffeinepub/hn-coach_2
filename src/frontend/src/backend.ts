@@ -97,6 +97,11 @@ export interface Booking {
     timestamp: bigint;
     timeSlot: string;
 }
+export interface StreakInfo {
+    daysToNext: bigint;
+    nextMilestone: bigint;
+    currentStreak: bigint;
+}
 export interface _CaffeineStorageRefillInformation {
     proposed_top_up_amount?: bigint;
 }
@@ -112,6 +117,7 @@ export interface _CaffeineStorageCreateCertificateResult {
     blob_hash: string;
 }
 export interface PointRecord {
+    remark: string;
     timestamp: bigint;
     points: bigint;
     reason: PointReason;
@@ -176,17 +182,20 @@ export interface backendInterface {
     getBookingsByDate(date: string): Promise<Array<Booking>>;
     getCallerPointHistory(): Promise<Array<PointRecord>>;
     getCallerPoints(): Promise<bigint>;
+    getCallerStreak(): Promise<StreakInfo>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getLastReadTimestamp(user: Principal): Promise<bigint | null>;
     getMessageHistory(): Promise<Array<Message>>;
     getUserBookings(): Promise<Array<Booking>>;
     getUserMessageHistory(user: Principal): Promise<Array<Message>>;
+    getUserPointHistory(user: Principal): Promise<Array<PointRecord>>;
     getUserPoints(user: Principal): Promise<bigint>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    givePoints(user: Principal, points: bigint, reason: PointReason): Promise<bigint>;
+    givePoints(user: Principal, points: bigint, reason: PointReason, remark: string): Promise<bigint>;
     isCallerAdmin(): Promise<boolean>;
     markMessagesAsRead(): Promise<void>;
+    recordActivity(): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendMessageToCoach(message: string, messageType: MessageType, blobId: string | null): Promise<void>;
     sendMessageToUser(user: Principal, message: string, messageType: MessageType, blobId: string | null): Promise<void>;
@@ -488,6 +497,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getCallerStreak(): Promise<StreakInfo> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCallerStreak();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCallerStreak();
+            return result;
+        }
+    }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
@@ -572,6 +595,20 @@ export class Backend implements backendInterface {
             return from_candid_vec_n28(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getUserPointHistory(arg0: Principal): Promise<Array<PointRecord>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getUserPointHistory(arg0);
+                return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getUserPointHistory(arg0);
+            return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async getUserPoints(arg0: Principal): Promise<bigint> {
         if (this.processError) {
             try {
@@ -600,17 +637,17 @@ export class Backend implements backendInterface {
             return from_candid_opt_n24(this._uploadFile, this._downloadFile, result);
         }
     }
-    async givePoints(arg0: Principal, arg1: bigint, arg2: PointReason): Promise<bigint> {
+    async givePoints(arg0: Principal, arg1: bigint, arg2: PointReason, arg3: string): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await this.actor.givePoints(arg0, arg1, to_candid_PointReason_n35(this._uploadFile, this._downloadFile, arg2));
+                const result = await this.actor.givePoints(arg0, arg1, to_candid_PointReason_n35(this._uploadFile, this._downloadFile, arg2), arg3);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.givePoints(arg0, arg1, to_candid_PointReason_n35(this._uploadFile, this._downloadFile, arg2));
+            const result = await this.actor.givePoints(arg0, arg1, to_candid_PointReason_n35(this._uploadFile, this._downloadFile, arg2), arg3);
             return result;
         }
     }
@@ -639,6 +676,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.markMessagesAsRead();
+            return result;
+        }
+    }
+    async recordActivity(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.recordActivity();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.recordActivity();
             return result;
         }
     }
@@ -785,15 +836,18 @@ function from_candid_record_n17(_uploadFile: (file: ExternalBlob) => Promise<Uin
     };
 }
 function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    remark: string;
     timestamp: bigint;
     points: bigint;
     reason: _PointReason;
 }): {
+    remark: string;
     timestamp: bigint;
     points: bigint;
     reason: PointReason;
 } {
     return {
+        remark: value.remark,
         timestamp: value.timestamp,
         points: value.points,
         reason: from_candid_PointReason_n22(_uploadFile, _downloadFile, value.reason)

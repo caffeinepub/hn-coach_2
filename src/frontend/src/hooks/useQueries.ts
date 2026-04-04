@@ -275,13 +275,22 @@ export function useGivePoints() {
       user,
       points,
       reason,
-    }: { user: Principal; points: bigint; reason: PointReason }) => {
+      remark,
+    }: {
+      user: Principal;
+      points: bigint;
+      reason: PointReason;
+      remark: string;
+    }) => {
       if (!actor) throw new Error("Actor not available");
-      return (actor as any).givePoints(user, points, reason);
+      return actor.givePoints(user, points, reason, remark);
     },
     onSuccess: (_data: any, variables: any) => {
       queryClient.invalidateQueries({
         queryKey: ["userPoints", variables.user.toString()],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["userPointHistory", variables.user.toString()],
       });
     },
   });
@@ -296,6 +305,19 @@ export function useGetUserPoints(user: Principal | null) {
       return (actor as any).getUserPoints(user);
     },
     enabled: !!actor && !actorFetching && !!user,
+  });
+}
+
+export function useGetUserPointHistory(user: Principal | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+  return useQuery<PointRecord[]>({
+    queryKey: ["userPointHistory", user?.toString()],
+    queryFn: async () => {
+      if (!actor || !user) return [];
+      return actor.getUserPointHistory(user);
+    },
+    enabled: !!actor && !actorFetching && !!user,
+    refetchInterval: 10000,
   });
 }
 
@@ -318,7 +340,7 @@ export function useGetCallerPointHistory() {
     queryKey: ["callerPointHistory"],
     queryFn: async () => {
       if (!actor) return [];
-      return (actor as any).getCallerPointHistory();
+      return actor.getCallerPointHistory();
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 10000,

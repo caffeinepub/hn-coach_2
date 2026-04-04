@@ -1,29 +1,42 @@
 # HN Coach
 
 ## Current State
-- Chat page shows a `PointsSummaryCard` with total points + category breakdown badges (Weight ×N, Footsteps ×N, Daily ×N)
-- A `BonusPointsGuide` collapsible card shows streak milestones (7/14/21/28 days) and image bonuses, but there is no live tracker for the user's actual current streak
-- Admin panel chat header has three preset point buttons: 🏋️ +20, 👣 +30, ⭐ +50 (plus a custom input)
-- Backend has no streak tracking; no `recordActivity` or `getCallerStreak` functions
+- Backend: `PointRecord` has `{ points: Nat; reason: PointReason; timestamp: Int }` -- no `remark` field.
+- Backend: `givePoints(user, points, reason)` -- no remark parameter.
+- Backend: `getCallerPointHistory()` returns full history for the user (caller).
+- Backend: No admin-facing `getUserPointHistory(user)` function.
+- Frontend (ChatPage): Shows total points summary card, streak tracker, and bonus points guide. No today's points card, no history list.
+- Frontend (AdminPage): PointsBar shows total points and a points input form with category selector. No remark field, no history view.
 
 ## Requested Changes (Diff)
 
 ### Add
-- **Backend**: `streakStore` (Map<Principal, [Int]> of active day timestamps), `recordActivity` shared func (idempotent, marks today UTC as active for caller), `getCallerStreak` query func (returns `{currentStreak: Nat; nextMilestone: Nat; daysToNext: Nat; lastActiveDate: Text}`)
-- **Frontend ChatPage**: `StreakTrackerCard` component -- shows current streak (fire emoji + day count), a progress bar toward the next bonus milestone (7→14→21→28 days), and calls `recordActivity` on mount
+- `remark: Text` field to `PointRecord` type in Motoko backend.
+- `remark` parameter to `givePoints(user, points, reason, remark)` backend function.
+- `getUserPointHistory(user: Principal)` admin-facing backend query (no auth check, protected by frontend password).
+- **Today's Points Card** on `ChatPage`: A separate badge/card showing total points earned today (sum of all PointRecords where timestamp is within current calendar day).
+- **Points History List** on `ChatPage`: A scrollable list below (or near) the points summary showing each PointRecord with date, category label, amount, and remark.
+- **Remark text input** in AdminPage PointsBar when awarding points: a text field for the coach to type the activity/reason remark.
+- **Points History section** in AdminPage per selected client: scrollable list of that client's point records (date, category, amount, remark), fetched via `getUserPointHistory`.
+- When coach awards points, also send a chat message to the user as a system bubble: "You earned {points} pts — {Category}: {remark}". This calls `sendMessageToUser` with a special formatted message.
 
 ### Modify
-- **Frontend ChatPage `PointsSummaryCard`**: Remove the Weight ×N, Footsteps ×N, Daily ×N breakdown badges. Keep total points display only.
-- **Frontend AdminPage `PointsPanel`**: Remove the three preset buttons (🏋️ +20, 👣 +30, ⭐ +50). Keep the custom points input + Give button only.
+- `givePoints` frontend call in AdminPage must pass the new `remark` parameter.
+- `PointRecord` TypeScript interface to include `remark: string`.
+- `getCallerPointHistory` on ChatPage to use the updated PointRecord with remark.
 
 ### Remove
-- The three preset point buttons from admin chat panel
-- The category count badges from user chat points card
+- Nothing removed.
 
 ## Implementation Plan
-1. Add `streakStore` to backend and two new query/update functions: `recordActivity` and `getCallerStreak`
-2. Expose new functions in `backend.d.ts` and declarations
-3. Add `useRecordActivity` mutation and `useGetCallerStreak` query hooks in `useQueries.ts`
-4. Build `StreakTrackerCard` in `ChatPage.tsx`, place it below `PointsSummaryCard`
-5. Remove category breakdown badges from `PointsSummaryCard` in `ChatPage.tsx`
-6. Remove three preset buttons from `AdminPage.tsx` `PointsPanel` component
+1. Update `PointRecord` type in `main.mo` to add `remark: Text`.
+2. Update `givePoints` function signature in `main.mo` to accept `remark: Text` and store it.
+3. Add `getUserPointHistory(user: Principal)` admin query function in `main.mo`.
+4. Regenerate frontend bindings (`backend.d.ts`) via Motoko code generation.
+5. In `ChatPage.tsx`:
+   a. Add "Today's Points" card: compute today's total by filtering `getCallerPointHistory()` records by today's date.
+   b. Add "Points History" collapsible/scrollable section listing all records with date, category, points, remark.
+6. In `AdminPage.tsx`:
+   a. Add remark text input to the points award form in PointsBar.
+   b. After awarding points, also call `sendMessageToUser` with the formatted notification bubble.
+   c. Add points history section per client showing their history from `getUserPointHistory`.

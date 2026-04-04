@@ -20,6 +20,7 @@ import {
   CheckCheck,
   Dumbbell,
   FileText,
+  History,
   Loader2,
   Lock,
   MessageSquare,
@@ -39,6 +40,7 @@ import {
   SenderRole,
 } from "../backend";
 import type { Booking, Message } from "../backend";
+import type { PointRecord } from "../backend";
 import { loadConfig } from "../config";
 import { useActor } from "../hooks/useActor";
 import {
@@ -47,6 +49,7 @@ import {
   useGetAllUsers,
   useGetLastReadTimestamp,
   useGetUserMessageHistoryAdmin,
+  useGetUserPointHistory,
   useGetUserPoints,
   useGetUserProfile,
   useGivePoints,
@@ -199,103 +202,259 @@ function UserListItem({
   );
 }
 
+function getAdminCategoryLabel(reason: PointReason): string {
+  switch (reason) {
+    case PointReason.weightImage:
+      return "Weight Image";
+    case PointReason.footsteps:
+      return "Footsteps";
+    case PointReason.dailyBonus:
+      return "Daily Bonus";
+    case PointReason.custom:
+      return "Custom";
+    default:
+      return "Points";
+  }
+}
+
 function PointsBar({ selectedUser }: { selectedUser: Principal }) {
   const { data: totalPoints, isLoading: pointsLoading } =
     useGetUserPoints(selectedUser);
+  const { data: pointHistory, isLoading: historyLoading } =
+    useGetUserPointHistory(selectedUser);
   const givePoints = useGivePoints();
+  const sendToUser = useSendMessageToUser();
   const [customPoints, setCustomPoints] = useState("");
+  const [remark, setRemark] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
 
   const total = Number(totalPoints ?? BigInt(0));
-
-  const _handlePreset = async (points: number, reason: PointReason) => {
-    try {
-      const newTotal = await givePoints.mutateAsync({
-        user: selectedUser,
-        points: BigInt(points),
-        reason,
-      });
-      toast.success(`Points awarded! New total: ${Number(newTotal)} pts`);
-    } catch {
-      toast.error("Failed to give points");
-    }
-  };
 
   const handleCustomGive = async () => {
     const pts = Number.parseInt(customPoints, 10);
     if (!pts || pts < 1) return;
+    const remarkText = remark.trim() || "Points awarded";
     try {
       const newTotal = await givePoints.mutateAsync({
         user: selectedUser,
         points: BigInt(pts),
         reason: PointReason.custom,
+        remark: remarkText,
+      });
+      // Send notification bubble in chat
+      const notificationMsg = `🏆 You earned ${pts} pts — Custom: ${remarkText}`;
+      await sendToUser.mutateAsync({
+        user: selectedUser,
+        message: notificationMsg,
+        messageType: MessageType.text,
+        blobId: null,
       });
       toast.success(`Points awarded! New total: ${Number(newTotal)} pts`);
       setCustomPoints("");
+      setRemark("");
     } catch {
       toast.error("Failed to give points");
     }
   };
 
-  const isGiving = givePoints.isPending;
+  const isGiving = givePoints.isPending || sendToUser.isPending;
+
+  const sortedHistory = pointHistory
+    ? [...pointHistory].sort(
+        (a, b) => Number(b.timestamp) - Number(a.timestamp),
+      )
+    : [];
 
   return (
     <div
-      className="px-3 py-2 border-b flex flex-wrap items-center gap-2"
+      className="border-b"
       style={{
-        background: "rgba(255,106,0,0.06)",
+        background: "rgba(255,106,0,0.04)",
         borderColor: "rgba(255,106,0,0.2)",
       }}
       data-ocid="admin.points.panel"
     >
-      {/* Total display */}
-      <div
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg flex-shrink-0"
-        style={{
-          background: "rgba(255,106,0,0.12)",
-          border: "1px solid rgba(255,106,0,0.3)",
-        }}
-      >
-        <Star className="w-3.5 h-3.5" style={{ color: "#FF6A00" }} />
-        {pointsLoading ? (
-          <Loader2
-            className="w-3 h-3 animate-spin"
-            style={{ color: "#FF6A00" }}
-          />
-        ) : (
-          <span className="text-xs font-bold" style={{ color: "#FF6A00" }}>
-            {total} pts
-          </span>
-        )}
-      </div>
-
-      {/* Custom points input */}
-      <div className="flex items-center gap-1.5 ml-auto">
-        <input
-          type="number"
-          min={1}
-          value={customPoints}
-          onChange={(e) => setCustomPoints(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleCustomGive()}
-          placeholder="pts"
-          className="w-16 h-7 px-2 rounded-lg text-xs text-white outline-none border text-center"
+      {/* Top row: total + give points form */}
+      <div className="px-3 py-2 flex flex-wrap items-center gap-2">
+        {/* Total display */}
+        <div
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg flex-shrink-0"
           style={{
-            background: "#1A3A4F",
-            borderColor: "rgba(255,106,0,0.3)",
-            color: "white",
+            background: "rgba(255,106,0,0.12)",
+            border: "1px solid rgba(255,106,0,0.3)",
           }}
-          data-ocid="admin.points.input"
-        />
+        >
+          <Star className="w-3.5 h-3.5" style={{ color: "#FF6A00" }} />
+          {pointsLoading ? (
+            <Loader2
+              className="w-3 h-3 animate-spin"
+              style={{ color: "#FF6A00" }}
+            />
+          ) : (
+            <span className="text-xs font-bold" style={{ color: "#FF6A00" }}>
+              {total} pts
+            </span>
+          )}
+        </div>
+
+        {/* History toggle */}
         <button
           type="button"
-          onClick={handleCustomGive}
-          disabled={isGiving || !customPoints || Number(customPoints) < 1}
-          className="h-7 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-40"
-          style={{ background: "#FF6A00" }}
-          data-ocid="admin.points.submit_button"
+          onClick={() => setShowHistory((v) => !v)}
+          className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors hover:opacity-80"
+          style={{
+            background: showHistory
+              ? "rgba(255,106,0,0.12)"
+              : "rgba(255,255,255,0.05)",
+            border: showHistory
+              ? "1px solid rgba(255,106,0,0.3)"
+              : "1px solid rgba(255,255,255,0.08)",
+            color: showHistory ? "#FF6A00" : "#A8B6C3",
+          }}
+          data-ocid="admin.points.toggle"
         >
-          {isGiving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Give"}
+          <History className="w-3 h-3" />
+          History
         </button>
+
+        {/* Custom points input + remark */}
+        <div className="flex items-center gap-1.5 ml-auto flex-wrap justify-end">
+          <input
+            type="text"
+            value={remark}
+            onChange={(e) => setRemark(e.target.value)}
+            placeholder="Remark / Activity"
+            className="h-7 px-2 rounded-lg text-xs text-white outline-none border"
+            style={{
+              background: "#1A3A4F",
+              borderColor: "rgba(255,106,0,0.25)",
+              color: "white",
+              width: "140px",
+            }}
+            data-ocid="admin.points.remark_input"
+          />
+          <input
+            type="number"
+            min={1}
+            value={customPoints}
+            onChange={(e) => setCustomPoints(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCustomGive()}
+            placeholder="pts"
+            className="w-14 h-7 px-2 rounded-lg text-xs text-white outline-none border text-center"
+            style={{
+              background: "#1A3A4F",
+              borderColor: "rgba(255,106,0,0.3)",
+              color: "white",
+            }}
+            data-ocid="admin.points.input"
+          />
+          <button
+            type="button"
+            onClick={handleCustomGive}
+            disabled={isGiving || !customPoints || Number(customPoints) < 1}
+            className="h-7 px-3 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-40"
+            style={{ background: "#FF6A00" }}
+            data-ocid="admin.points.submit_button"
+          >
+            {isGiving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Give"}
+          </button>
+        </div>
       </div>
+
+      {/* Points History collapsible */}
+      {showHistory && (
+        <div
+          className="px-3 pb-2"
+          style={{ borderTop: "1px solid rgba(255,106,0,0.1)" }}
+        >
+          <div className="flex items-center gap-1.5 py-1.5">
+            <History className="w-3 h-3" style={{ color: "#A8B6C3" }} />
+            <span
+              className="text-xs font-semibold uppercase tracking-wider"
+              style={{ color: "#A8B6C3" }}
+            >
+              Points History
+            </span>
+          </div>
+          {historyLoading ? (
+            <div
+              className="flex justify-center py-3"
+              data-ocid="admin.points_history.loading_state"
+            >
+              <Loader2
+                className="w-4 h-4 animate-spin"
+                style={{ color: "#FF6A00" }}
+              />
+            </div>
+          ) : sortedHistory.length === 0 ? (
+            <p
+              className="text-xs py-2"
+              style={{ color: "#A8B6C3" }}
+              data-ocid="admin.points_history.empty_state"
+            >
+              No points awarded yet
+            </p>
+          ) : (
+            <ScrollArea
+              className="max-h-40"
+              data-ocid="admin.points_history.panel"
+            >
+              <div className="space-y-1.5 pr-1">
+                {sortedHistory.map((record: PointRecord, i: number) => {
+                  const ms = Number(record.timestamp) / 1_000_000;
+                  const dateStr = format(new Date(ms), "MMM d, yyyy");
+                  const category = getAdminCategoryLabel(record.reason);
+                  return (
+                    <div
+                      key={`${record.timestamp}-${i}`}
+                      className="flex items-start justify-between gap-2 px-2.5 py-1.5 rounded-lg"
+                      style={{
+                        background: "rgba(255,106,0,0.06)",
+                        border: "1px solid rgba(255,106,0,0.12)",
+                      }}
+                      data-ocid={`admin.points_history.item.${i + 1}`}
+                    >
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                            style={{
+                              background: "rgba(255,106,0,0.15)",
+                              color: "#FFA560",
+                            }}
+                          >
+                            {category}
+                          </span>
+                          <span
+                            className="text-xs"
+                            style={{ color: "#A8B6C3" }}
+                          >
+                            {dateStr}
+                          </span>
+                        </div>
+                        {record.remark && (
+                          <p
+                            className="text-xs truncate"
+                            style={{ color: "#8BA3B5" }}
+                          >
+                            {record.remark}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className="text-sm font-bold flex-shrink-0 tabular-nums"
+                        style={{ color: "#FF6A00" }}
+                      >
+                        +{Number(record.points)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+          )}
+        </div>
+      )}
     </div>
   );
 }

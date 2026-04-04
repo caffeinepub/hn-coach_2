@@ -53,14 +53,15 @@ export const PointReason = IDL.Variant({
   'weightImage' : IDL.Null,
 });
 export const PointRecord = IDL.Record({
+  'remark' : IDL.Text,
   'timestamp' : IDL.Int,
   'points' : IDL.Nat,
   'reason' : PointReason,
 });
 export const StreakInfo = IDL.Record({
-  'currentStreak' : IDL.Nat,
-  'nextMilestone' : IDL.Nat,
   'daysToNext' : IDL.Nat,
+  'nextMilestone' : IDL.Nat,
+  'currentStreak' : IDL.Nat,
 });
 export const MessageType = IDL.Variant({
   'file' : IDL.Null,
@@ -144,13 +145,22 @@ export const idlService = IDL.Service({
       [IDL.Vec(Message)],
       ['query'],
     ),
+  'getUserPointHistory' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Vec(PointRecord)],
+      ['query'],
+    ),
   'getUserPoints' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
-  'givePoints' : IDL.Func([IDL.Principal, IDL.Nat, PointReason], [IDL.Nat], []),
+  'givePoints' : IDL.Func(
+      [IDL.Principal, IDL.Nat, PointReason, IDL.Text],
+      [IDL.Nat],
+      [],
+    ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'markMessagesAsRead' : IDL.Func([], [], []),
   'recordActivity' : IDL.Func([], [], []),
@@ -215,14 +225,15 @@ export const idlFactory = ({ IDL }) => {
     'weightImage' : IDL.Null,
   });
   const PointRecord = IDL.Record({
+    'remark' : IDL.Text,
     'timestamp' : IDL.Int,
     'points' : IDL.Nat,
     'reason' : PointReason,
   });
   const StreakInfo = IDL.Record({
-    'currentStreak' : IDL.Nat,
-    'nextMilestone' : IDL.Nat,
     'daysToNext' : IDL.Nat,
+    'nextMilestone' : IDL.Nat,
+    'currentStreak' : IDL.Nat,
   });
   const MessageType = IDL.Variant({
     'file' : IDL.Null,
@@ -307,6 +318,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Message)],
         ['query'],
       ),
+    'getUserPointHistory' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Vec(PointRecord)],
+        ['query'],
+      ),
     'getUserPoints' : IDL.Func([IDL.Principal], [IDL.Nat], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
@@ -314,7 +330,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'givePoints' : IDL.Func(
-        [IDL.Principal, IDL.Nat, PointReason],
+        [IDL.Principal, IDL.Nat, PointReason, IDL.Text],
         [IDL.Nat],
         [],
       ),

@@ -13,8 +13,9 @@ import Order "mo:core/Order";
 import MixinAuthorization "authorization/MixinAuthorization";
 import MixinStorage "blob-storage/Mixin";
 import AccessControl "authorization/access-control";
+import Migration "migration";
 
-
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -78,6 +79,7 @@ actor {
   type PointRecord = {
     points : Nat;
     reason : PointReason;
+    remark : Text;
     timestamp : Int;
   };
 
@@ -403,10 +405,11 @@ actor {
   // POINTS SYSTEM - no auth checks on admin functions, protected by frontend password
 
   // Admin gives points to a user. Returns new total.
-  public shared func givePoints(user : Principal, points : Nat, reason : PointReason) : async Nat {
+  public shared func givePoints(user : Principal, points : Nat, reason : PointReason, remark : Text) : async Nat {
     let pointRecord : PointRecord = {
       points;
       reason;
+      remark;
       timestamp = Time.now();
     };
 
@@ -420,6 +423,13 @@ actor {
 
     pointsStore.add(user, history);
     getUserPointsInternal(user);
+  };
+
+  public query func getUserPointHistory(user : Principal) : async [PointRecord] {
+    switch (pointsStore.get(user)) {
+      case (null) { [] };
+      case (?history) { history.toArray() };
+    };
   };
 
   // Returns total points for a user. No auth - admin can call without login.
@@ -554,3 +564,4 @@ actor {
     { currentStreak = streak; nextMilestone; daysToNext };
   };
 };
+
