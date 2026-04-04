@@ -7,9 +7,11 @@ import { useGetCallerUserProfile } from "../hooks/useQueries";
 
 interface ProtectedRouteProps {
   children: ReactNode;
+  /** Set to true on the profile page so it doesn't redirect back to itself */
+  isProfilePage?: boolean;
 }
 
-function isProfileComplete(
+export function isProfileComplete(
   profile:
     | {
         name?: string;
@@ -38,10 +40,13 @@ function isProfileComplete(
   );
 }
 
-// Safety timeout: if loading takes longer than this, stop waiting and proceed
-const LOADING_TIMEOUT_MS = 8000;
+// Safety timeout: if loading takes longer than this, stop waiting
+const LOADING_TIMEOUT_MS = 6000;
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
+export function ProtectedRoute({
+  children,
+  isProfilePage = false,
+}: ProtectedRouteProps) {
   const { identity, isInitializing } = useInternetIdentity();
   const {
     data: profile,
@@ -52,18 +57,20 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
 
-  // Safety net: if loading takes too long, stop spinning
   const [timedOut, setTimedOut] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (
+    const isLoading =
       isInitializing ||
-      (identity && profileLoading && !profileFetched && !profileError)
-    ) {
-      timerRef.current = setTimeout(() => {
-        setTimedOut(true);
-      }, LOADING_TIMEOUT_MS);
+      (identity && profileLoading && !profileFetched && !profileError);
+
+    if (isLoading) {
+      if (!timerRef.current) {
+        timerRef.current = setTimeout(() => {
+          setTimedOut(true);
+        }, LOADING_TIMEOUT_MS);
+      }
     } else {
       setTimedOut(false);
       if (timerRef.current) {
@@ -72,15 +79,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
       }
     }
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, [isInitializing, identity, profileLoading, profileFetched, profileError]);
 
-  // Still initializing auth AND haven't timed out
   const isWaiting =
     !timedOut &&
     (isInitializing ||
-      (identity && profileLoading && !profileFetched && !profileError));
+      (!!identity && profileLoading && !profileFetched && !profileError));
 
   if (isWaiting) {
     return (
@@ -99,12 +108,17 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
+  // Not logged in → go to login
   if (!identity) {
     return <Navigate to="/login" />;
   }
 
-  // If profile failed to load (error) or is incomplete, send to /profile
-  // unless already there
+  // Profile page itself: don't redirect back to /profile — just render
+  if (isProfilePage) {
+    return <>{children}</>;
+  }
+
+  // Other pages: if profile incomplete, send to /profile
   if (
     (profileError || !isProfileComplete(profile)) &&
     currentPath !== "/profile"
@@ -114,5 +128,3 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   return <>{children}</>;
 }
-
-export { isProfileComplete };

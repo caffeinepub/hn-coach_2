@@ -2,7 +2,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -129,7 +128,6 @@ export function ProfilePage() {
     }
   }, [profile, isFetched]);
 
-  // Re-validate on form change after first submission attempt
   useEffect(() => {
     if (submitted) {
       setErrors(validateForm(form, avatarPreview));
@@ -203,7 +201,6 @@ export function ProfilePage() {
 
   const displayAvatar = avatarPreview || form.avatarBlobId || undefined;
 
-  // Compute field statuses and progress
   const fieldStatuses = getFieldStatuses(form, avatarPreview);
   const filledCount = fieldStatuses.filter((f) => f.filled).length;
   const totalCount = fieldStatuses.length;
@@ -211,7 +208,8 @@ export function ProfilePage() {
 
   if (isLoading) {
     return (
-      <ProtectedRoute>
+      // isProfilePage=true so we don't get redirected back to /profile infinitely
+      <ProtectedRoute isProfilePage>
         <div
           className="min-h-screen flex flex-col"
           style={{ background: "#0B2232" }}
@@ -229,7 +227,8 @@ export function ProfilePage() {
   }
 
   return (
-    <ProtectedRoute>
+    // isProfilePage=true so ProtectedRoute won't redirect back to /profile
+    <ProtectedRoute isProfilePage>
       <div
         className="min-h-screen flex flex-col"
         style={{ background: "#0B2232" }}
@@ -282,7 +281,6 @@ export function ProfilePage() {
               }}
               data-ocid="profile.progress.card"
             >
-              {/* Header row */}
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-semibold text-white">
                   Profile Completion
@@ -297,7 +295,6 @@ export function ProfilePage() {
                 </span>
               </div>
 
-              {/* Progress bar */}
               <div
                 className="w-full h-2.5 rounded-full overflow-hidden mb-4"
                 style={{ background: "#1A3A4F" }}
@@ -316,7 +313,6 @@ export function ProfilePage() {
                 />
               </div>
 
-              {/* Field checklist — 2-column grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {fieldStatuses.map((field) => (
                   <div
