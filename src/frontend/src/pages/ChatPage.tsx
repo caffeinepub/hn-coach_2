@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import {
+  Camera,
+  ChevronDown,
   Clock,
   FileText,
+  Flame,
   Loader2,
   MessageCircle,
   Paperclip,
@@ -122,7 +125,7 @@ function PointsSummaryCard() {
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35 }}
-      className="rounded-xl px-4 py-3 mb-5"
+      className="rounded-xl px-4 py-3 mb-3"
       style={{
         background: "#112A3A",
         border: "1px solid #203B4D",
@@ -199,6 +202,176 @@ function PointsSummaryCard() {
           )}
         </div>
       )}
+    </motion.div>
+  );
+}
+
+const STREAK_TIERS = [
+  { days: 7, pts: 500 },
+  { days: 14, pts: 1000 },
+  { days: 21, pts: 1500 },
+  { days: 28, pts: 2000 },
+];
+
+const IMAGE_BONUSES = [
+  { label: "Before Image", pts: 250 },
+  { label: "After Image", pts: 250 },
+];
+
+function BonusPointsGuide() {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.08 }}
+      className="rounded-xl mb-5 overflow-hidden"
+      style={{ background: "#112A3A", border: "1px solid #203B4D" }}
+      data-ocid="chat.bonus_guide.card"
+    >
+      {/* Header / toggle */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/5 transition-colors"
+        data-ocid="chat.bonus_guide.toggle"
+      >
+        <div className="flex items-center gap-2">
+          <Trophy className="w-4 h-4" style={{ color: "#FF6A00" }} />
+          <span
+            className="text-xs font-semibold tracking-wide"
+            style={{ color: "#A8B6C3" }}
+          >
+            🎯 How to Earn Bonus Points
+          </span>
+        </div>
+        <motion.div
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="w-4 h-4" style={{ color: "#A8B6C3" }} />
+        </motion.div>
+      </button>
+
+      {/* Collapsible body */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="bonus-body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            style={{ overflow: "hidden" }}
+          >
+            <div className="px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Streak bonuses */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Flame className="w-3.5 h-3.5" style={{ color: "#FF6A00" }} />
+                  <span
+                    className="text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "#FF6A00" }}
+                  >
+                    Streak Bonuses
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {STREAK_TIERS.map((tier, i) => {
+                    const intensity = 0.3 + i * 0.175;
+                    return (
+                      <div
+                        key={tier.days}
+                        className="flex items-center justify-between px-3 py-1.5 rounded-lg"
+                        style={{
+                          background: `rgba(255,106,0,${intensity * 0.12})`,
+                          border: `1px solid rgba(255,106,0,${intensity * 0.3})`,
+                        }}
+                        data-ocid={`chat.streak_tier.item.${i + 1}`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm">
+                            {i === 0
+                              ? "🔥"
+                              : i === 1
+                                ? "🔥🔥"
+                                : i === 2
+                                  ? "🔥🔥🔥"
+                                  : "🔥🔥🔥🔥"}
+                          </span>
+                          <span className="text-xs font-medium text-white">
+                            {tier.days} days
+                          </span>
+                        </div>
+                        <span
+                          className="text-xs font-bold tabular-nums"
+                          style={{
+                            color: `rgba(255,${130 + i * 20},${0 + i * 10},1)`,
+                          }}
+                        >
+                          +{tier.pts.toLocaleString()} pts
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Progress image bonuses */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Camera
+                    className="w-3.5 h-3.5"
+                    style={{ color: "#FF6A00" }}
+                  />
+                  <span
+                    className="text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "#FF6A00" }}
+                  >
+                    Progress Images
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {IMAGE_BONUSES.map((bonus, i) => (
+                    <div
+                      key={bonus.label}
+                      className="flex items-center justify-between px-3 py-1.5 rounded-lg"
+                      style={{
+                        background: "rgba(255,106,0,0.07)",
+                        border: "1px solid rgba(255,106,0,0.18)",
+                      }}
+                      data-ocid={`chat.image_bonus.item.${i + 1}`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm">{i === 0 ? "📸" : "🖼️"}</span>
+                        <span className="text-xs font-medium text-white">
+                          {bonus.label}
+                        </span>
+                      </div>
+                      <span
+                        className="text-xs font-bold tabular-nums"
+                        style={{ color: "#FFA560" }}
+                      >
+                        +{bonus.pts} pts
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Motivational note */}
+                <p
+                  className="text-xs mt-2 leading-relaxed"
+                  style={{ color: "#A8B6C3" }}
+                >
+                  Share your before &amp; after progress photos with your coach
+                  to earn bonus points and track your transformation! 💪
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -393,6 +566,9 @@ export function ChatPage() {
 
             {/* Points summary card */}
             <PointsSummaryCard />
+
+            {/* Bonus points guide */}
+            <BonusPointsGuide />
 
             {/* Chat container */}
             <div

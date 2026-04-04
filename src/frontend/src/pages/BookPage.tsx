@@ -106,7 +106,7 @@ export function BookPage() {
                   Book an Appointment
                 </h1>
                 <p className="text-sm" style={{ color: "#A8B6C3" }}>
-                  Schedule a 40-minute Zoom session with your coach
+                  Schedule a 40-minute coaching session · Available 6am – 10pm
                 </p>
               </div>
             </div>
@@ -209,7 +209,7 @@ export function BookPage() {
                 ) : (
                   <div className="space-y-4">
                     <div
-                      className="grid grid-cols-2 sm:grid-cols-3 gap-2"
+                      className="grid grid-cols-3 sm:grid-cols-4 gap-2"
                       data-ocid="book.slots.panel"
                     >
                       {slots.map(([time, available], i) => (
@@ -218,7 +218,7 @@ export function BookPage() {
                           type="button"
                           disabled={!available}
                           onClick={() => setSelectedSlot(time)}
-                          className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
+                          className={`px-2 py-2.5 rounded-xl text-sm font-medium border transition-all duration-200 ${
                             !available
                               ? "opacity-40 cursor-not-allowed"
                               : selectedSlot === time
@@ -237,7 +237,7 @@ export function BookPage() {
                           }}
                           data-ocid={`book.slots.item.${i + 1}`}
                         >
-                          <Clock className="w-3.5 h-3.5 inline mr-1 opacity-70" />
+                          <Clock className="w-3 h-3 inline mr-1 opacity-70" />
                           {time}
                         </button>
                       ))}
@@ -267,7 +267,7 @@ export function BookPage() {
                           className="text-xs mb-3"
                           style={{ color: "#A8B6C3" }}
                         >
-                          40-minute Zoom session with your coach
+                          40-minute coaching session with your coach
                         </p>
                         <Button
                           onClick={handleConfirmBooking}
@@ -357,7 +357,7 @@ export function BookPage() {
                             className="text-xs mt-0.5"
                             style={{ color: "#A8B6C3" }}
                           >
-                            40-min Zoom · Personal coaching session
+                            40-min coaching session
                           </p>
                         </div>
                       </div>
