@@ -325,4 +325,42 @@ export function useGetCallerPointHistory() {
   });
 }
 
+// Streak Hooks
+
+export function useGetCallerStreak() {
+  const { actor, isFetching: actorFetching } = useActor();
+  return useQuery<{
+    currentStreak: bigint;
+    nextMilestone: bigint;
+    daysToNext: bigint;
+  }>({
+    queryKey: ["callerStreak"],
+    queryFn: async () => {
+      if (!actor)
+        return {
+          currentStreak: BigInt(0),
+          nextMilestone: BigInt(7),
+          daysToNext: BigInt(7),
+        };
+      return (actor as any).getCallerStreak();
+    },
+    enabled: !!actor && !actorFetching,
+    refetchInterval: 30000,
+  });
+}
+
+export function useRecordActivity() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error("Actor not available");
+      return (actor as any).recordActivity();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["callerStreak"] });
+    },
+  });
+}
+
 export { PointReason };

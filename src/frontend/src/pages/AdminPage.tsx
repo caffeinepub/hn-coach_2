@@ -207,7 +207,7 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
 
   const total = Number(totalPoints ?? BigInt(0));
 
-  const handlePreset = async (points: number, reason: PointReason) => {
+  const _handlePreset = async (points: number, reason: PointReason) => {
     try {
       const newTotal = await givePoints.mutateAsync({
         user: selectedUser,
@@ -267,55 +267,6 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
           </span>
         )}
       </div>
-
-      {/* Preset buttons */}
-      <button
-        type="button"
-        onClick={() => handlePreset(20, PointReason.weightImage)}
-        disabled={isGiving}
-        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-        style={{
-          background: "rgba(255,106,0,0.1)",
-          border: "1px solid rgba(255,106,0,0.25)",
-          color: "#FFA560",
-        }}
-        title="Give 20 points for weight image"
-        data-ocid="admin.points.button"
-      >
-        🏋️ +20
-      </button>
-
-      <button
-        type="button"
-        onClick={() => handlePreset(30, PointReason.footsteps)}
-        disabled={isGiving}
-        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-        style={{
-          background: "rgba(255,106,0,0.1)",
-          border: "1px solid rgba(255,106,0,0.25)",
-          color: "#FFA560",
-        }}
-        title="Give 30 points for footsteps"
-        data-ocid="admin.points.button"
-      >
-        👣 +30
-      </button>
-
-      <button
-        type="button"
-        onClick={() => handlePreset(50, PointReason.dailyBonus)}
-        disabled={isGiving}
-        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-opacity hover:opacity-80 disabled:opacity-50"
-        style={{
-          background: "rgba(255,106,0,0.1)",
-          border: "1px solid rgba(255,106,0,0.25)",
-          color: "#FFA560",
-        }}
-        title="Give 50 daily bonus points"
-        data-ocid="admin.points.button"
-      >
-        ⭐ +50
-      </button>
 
       {/* Custom points input */}
       <div className="flex items-center gap-1.5 ml-auto">

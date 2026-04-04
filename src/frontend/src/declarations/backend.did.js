@@ -57,6 +57,11 @@ export const PointRecord = IDL.Record({
   'points' : IDL.Nat,
   'reason' : PointReason,
 });
+export const StreakInfo = IDL.Record({
+  'currentStreak' : IDL.Nat,
+  'nextMilestone' : IDL.Nat,
+  'daysToNext' : IDL.Nat,
+});
 export const MessageType = IDL.Variant({
   'file' : IDL.Null,
   'text' : IDL.Null,
@@ -124,6 +129,7 @@ export const idlService = IDL.Service({
   'getBookingsByDate' : IDL.Func([IDL.Text], [IDL.Vec(Booking)], ['query']),
   'getCallerPointHistory' : IDL.Func([], [IDL.Vec(PointRecord)], ['query']),
   'getCallerPoints' : IDL.Func([], [IDL.Nat], ['query']),
+  'getCallerStreak' : IDL.Func([], [StreakInfo], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getLastReadTimestamp' : IDL.Func(
@@ -147,6 +153,7 @@ export const idlService = IDL.Service({
   'givePoints' : IDL.Func([IDL.Principal, IDL.Nat, PointReason], [IDL.Nat], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'markMessagesAsRead' : IDL.Func([], [], []),
+  'recordActivity' : IDL.Func([], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'sendMessageToCoach' : IDL.Func(
       [IDL.Text, MessageType, IDL.Opt(IDL.Text)],
@@ -211,6 +218,11 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : IDL.Int,
     'points' : IDL.Nat,
     'reason' : PointReason,
+  });
+  const StreakInfo = IDL.Record({
+    'currentStreak' : IDL.Nat,
+    'nextMilestone' : IDL.Nat,
+    'daysToNext' : IDL.Nat,
   });
   const MessageType = IDL.Variant({
     'file' : IDL.Null,
@@ -280,6 +292,7 @@ export const idlFactory = ({ IDL }) => {
     'getBookingsByDate' : IDL.Func([IDL.Text], [IDL.Vec(Booking)], ['query']),
     'getCallerPointHistory' : IDL.Func([], [IDL.Vec(PointRecord)], ['query']),
     'getCallerPoints' : IDL.Func([], [IDL.Nat], ['query']),
+    'getCallerStreak' : IDL.Func([], [StreakInfo], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getLastReadTimestamp' : IDL.Func(
@@ -307,6 +320,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'markMessagesAsRead' : IDL.Func([], [], []),
+    'recordActivity' : IDL.Func([], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'sendMessageToCoach' : IDL.Func(
         [IDL.Text, MessageType, IDL.Opt(IDL.Text)],

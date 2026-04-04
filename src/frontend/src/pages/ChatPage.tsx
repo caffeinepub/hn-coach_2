@@ -15,17 +15,18 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MessageType, PointReason, SenderRole } from "../backend";
+import { MessageType, SenderRole } from "../backend";
 import { Footer } from "../components/Footer";
 import { NavBar } from "../components/NavBar";
 import { ProtectedRoute } from "../components/ProtectedRoute";
 import { loadConfig } from "../config";
 import { useActor } from "../hooks/useActor";
 import {
-  useGetCallerPointHistory,
   useGetCallerPoints,
+  useGetCallerStreak,
   useGetMessageHistory,
   useMarkMessagesAsRead,
+  useRecordActivity,
   useSendMessageToCoach,
 } from "../hooks/useQueries";
 import { StorageClient } from "../utils/StorageClient";
@@ -103,22 +104,9 @@ function ImageMessage({
 }
 
 function PointsSummaryCard() {
-  const { data: totalPoints, isLoading: pointsLoading } = useGetCallerPoints();
-  const { data: history, isLoading: historyLoading } =
-    useGetCallerPointHistory();
+  const { data: totalPoints, isLoading } = useGetCallerPoints();
 
   const total = Number(totalPoints ?? BigInt(0));
-  const isLoading = pointsLoading || historyLoading;
-
-  // Count each category from history
-  const weightCount =
-    history?.filter((r) => r.reason === PointReason.weightImage).length ?? 0;
-  const footstepsCount =
-    history?.filter((r) => r.reason === PointReason.footsteps).length ?? 0;
-  const dailyCount =
-    history?.filter((r) => r.reason === PointReason.dailyBonus).length ?? 0;
-
-  const hasHistory = (history?.length ?? 0) > 0;
 
   return (
     <motion.div
@@ -143,63 +131,140 @@ function PointsSummaryCard() {
           </span>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          {/* Total */}
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4" style={{ color: "#FF6A00" }} />
-            <span className="text-sm font-semibold text-white">
-              Your Points:
-            </span>
-            <span className="text-base font-bold" style={{ color: "#FF6A00" }}>
-              {total} pts
+        <div className="flex items-center gap-2">
+          <Trophy className="w-4 h-4" style={{ color: "#FF6A00" }} />
+          <span className="text-sm font-semibold text-white">Your Points:</span>
+          <span className="text-base font-bold" style={{ color: "#FF6A00" }}>
+            {total} pts
+          </span>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+const STREAK_MILESTONES = [
+  { days: 7, pts: 500 },
+  { days: 14, pts: 1000 },
+  { days: 21, pts: 1500 },
+  { days: 28, pts: 2000 },
+];
+
+function getMilestoneBonus(days: number): number {
+  for (const m of STREAK_MILESTONES) {
+    if (days <= m.days) return m.pts;
+  }
+  return STREAK_MILESTONES[STREAK_MILESTONES.length - 1].pts;
+}
+
+function StreakTrackerCard() {
+  const { data: streak, isLoading } = useGetCallerStreak();
+  const recordActivity = useRecordActivity();
+  const recordActivityRef = useRef(recordActivity.mutate);
+  recordActivityRef.current = recordActivity.mutate;
+
+  // Record activity on mount (fire-and-forget)
+  useEffect(() => {
+    try {
+      recordActivityRef.current();
+    } catch {
+      // silently ignore
+    }
+  }, []);
+
+  const currentStreak = Number(streak?.currentStreak ?? BigInt(0));
+  const nextMilestone = Number(streak?.nextMilestone ?? BigInt(7));
+  const daysToNext = Number(streak?.daysToNext ?? BigInt(7));
+  const milestoneBonus = getMilestoneBonus(nextMilestone);
+
+  const progressPct = Math.min(
+    100,
+    nextMilestone > 0 ? (currentStreak / nextMilestone) * 100 : 100,
+  );
+
+  const milestoneReached = daysToNext === 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, delay: 0.05 }}
+      className="rounded-xl px-4 py-3 mb-3"
+      style={{
+        background: "#112A3A",
+        border: "1px solid #203B4D",
+      }}
+      data-ocid="chat.streak.card"
+    >
+      {isLoading ? (
+        <div className="flex items-center gap-2">
+          <Loader2
+            className="w-4 h-4 animate-spin"
+            style={{ color: "#FF6A00" }}
+          />
+          <span className="text-xs" style={{ color: "#A8B6C3" }}>
+            Loading streak...
+          </span>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* Header row */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Flame className="w-4 h-4" style={{ color: "#FF6A00" }} />
+              <span className="text-sm font-bold text-white">
+                🔥{" "}
+                {currentStreak === 1
+                  ? "1 Day Streak"
+                  : `${currentStreak} Day Streak`}
+              </span>
+            </div>
+            <span
+              className="text-xs font-medium px-2 py-0.5 rounded-full"
+              style={{
+                background: "rgba(255,106,0,0.12)",
+                border: "1px solid rgba(255,106,0,0.25)",
+                color: "#FFA560",
+              }}
+            >
+              Next: {nextMilestone} days → +{milestoneBonus.toLocaleString()}{" "}
+              pts
             </span>
           </div>
 
-          {/* Breakdown */}
-          {hasHistory ? (
-            <div className="flex flex-wrap items-center gap-2">
-              {weightCount > 0 && (
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "rgba(255,106,0,0.1)",
-                    border: "1px solid rgba(255,106,0,0.2)",
-                    color: "#FFA560",
-                  }}
-                >
-                  🏋️ Weight ×{weightCount}
-                </span>
-              )}
-              {footstepsCount > 0 && (
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "rgba(255,106,0,0.1)",
-                    border: "1px solid rgba(255,106,0,0.2)",
-                    color: "#FFA560",
-                  }}
-                >
-                  👣 Footsteps ×{footstepsCount}
-                </span>
-              )}
-              {dailyCount > 0 && (
-                <span
-                  className="text-xs px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "rgba(255,106,0,0.1)",
-                    border: "1px solid rgba(255,106,0,0.2)",
-                    color: "#FFA560",
-                  }}
-                >
-                  ⭐ Daily ×{dailyCount}
-                </span>
-              )}
-            </div>
-          ) : (
-            <span className="text-xs" style={{ color: "#A8B6C3" }}>
-              Earn points by sharing progress with your coach!
-            </span>
-          )}
+          {/* Progress bar */}
+          <div
+            className="h-2 rounded-full overflow-hidden w-full"
+            style={{ background: "#0D2030" }}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPct}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="h-full rounded-full"
+              style={{ background: "#FF6A00" }}
+            />
+          </div>
+
+          {/* Status text */}
+          <p className="text-xs" style={{ color: "#A8B6C3" }}>
+            {milestoneReached ? (
+              <span style={{ color: "#FF6A00" }}>
+                🎉 Milestone reached! Keep it up!
+              </span>
+            ) : (
+              <>
+                <span style={{ color: "#FFA560" }}>
+                  {daysToNext} days to go
+                </span>{" "}
+                for a{" "}
+                <span style={{ color: "#FF6A00" }} className="font-semibold">
+                  +{milestoneBonus.toLocaleString()} pts
+                </span>{" "}
+                streak bonus
+              </>
+            )}
+          </p>
         </div>
       )}
     </motion.div>
@@ -566,6 +631,9 @@ export function ChatPage() {
 
             {/* Points summary card */}
             <PointsSummaryCard />
+
+            {/* Streak tracker card */}
+            <StreakTrackerCard />
 
             {/* Bonus points guide */}
             <BonusPointsGuide />

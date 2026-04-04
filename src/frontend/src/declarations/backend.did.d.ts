@@ -39,6 +39,11 @@ export interface PointRecord {
   'points' : bigint,
   'reason' : PointReason,
 }
+export interface StreakInfo {
+  'currentStreak' : bigint,
+  'nextMilestone' : bigint,
+  'daysToNext' : bigint,
+}
 export type SenderRole = { 'coach' : null } |
   { 'user' : null };
 export interface UserProfile {
@@ -96,6 +101,7 @@ export interface _SERVICE {
   'getBookingsByDate' : ActorMethod<[string], Array<Booking>>,
   'getCallerPointHistory' : ActorMethod<[], Array<PointRecord>>,
   'getCallerPoints' : ActorMethod<[], bigint>,
+  'getCallerStreak' : ActorMethod<[], StreakInfo>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getLastReadTimestamp' : ActorMethod<[Principal], [] | [bigint]>,
@@ -107,6 +113,7 @@ export interface _SERVICE {
   'givePoints' : ActorMethod<[Principal, bigint, PointReason], bigint>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'markMessagesAsRead' : ActorMethod<[], undefined>,
+  'recordActivity' : ActorMethod<[], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'sendMessageToCoach' : ActorMethod<
     [string, MessageType, [] | [string]],

@@ -37,6 +37,11 @@ export interface UserProfile {
     targetGoal: string;
     avatarBlobId?: string;
 }
+export interface StreakInfo {
+    currentStreak: bigint;
+    nextMilestone: bigint;
+    daysToNext: bigint;
+}
 export enum BookingStatus {
     cancelled = "cancelled",
     booked = "booked"
@@ -76,6 +81,7 @@ export interface backendInterface {
     getBookingsByDate(date: string): Promise<Array<Booking>>;
     getCallerPointHistory(): Promise<Array<PointRecord>>;
     getCallerPoints(): Promise<bigint>;
+    getCallerStreak(): Promise<StreakInfo>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getLastReadTimestamp(user: Principal): Promise<bigint | null>;
@@ -87,6 +93,7 @@ export interface backendInterface {
     givePoints(user: Principal, points: bigint, reason: PointReason): Promise<bigint>;
     isCallerAdmin(): Promise<boolean>;
     markMessagesAsRead(): Promise<void>;
+    recordActivity(): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendMessageToCoach(message: string, messageType: MessageType, blobId: string | null): Promise<void>;
     sendMessageToUser(user: Principal, message: string, messageType: MessageType, blobId: string | null): Promise<void>;
