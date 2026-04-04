@@ -1,19 +1,19 @@
-import Map "mo:core/Map";
-import Array "mo:core/Array";
-import Time "mo:core/Time";
 import Iter "mo:core/Iter";
-import Order "mo:core/Order";
+import Text "mo:core/Text";
+import List "mo:core/List";
+import Map "mo:core/Map";
+import Time "mo:core/Time";
 import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
-import List "mo:core/List";
-import Text "mo:core/Text";
+import Array "mo:core/Array";
 import Nat "mo:core/Nat";
-
+import Order "mo:core/Order";
+import Migration "migration";
 import MixinAuthorization "authorization/MixinAuthorization";
-import AccessControl "authorization/access-control";
 import MixinStorage "blob-storage/Mixin";
-import Storage "blob-storage/Storage";
+import AccessControl "authorization/access-control";
 
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -32,9 +32,22 @@ actor {
     avatarBlobId : ?Text;
   };
 
+  type SenderRole = {
+    #user;
+    #coach;
+  };
+
+  type MessageType = {
+    #text;
+    #image;
+    #file;
+  };
+
   type Message = {
     senderRole : SenderRole;
     message : Text;
+    messageType : MessageType;
+    blobId : ?Text;
     timestamp : Int;
   };
 
@@ -54,10 +67,30 @@ actor {
     #cancelled;
   };
 
-  type SenderRole = {
-    #user;
-    #coach;
-  };
+  // STORAGE -------------------------------------------------------------------
+
+  let profileStore = Map.empty<Principal, UserProfile>();
+  let chatStore = Map.empty<Principal, MessageHistory>();
+  let bookingStore = Map.empty<Nat, Booking>();
+  var nextBookingId = 1;
+
+  // CONSTANTS -----------------------------------------------------------------
+
+  let timeSlots = [
+    "09:00",
+    "09:40",
+    "10:20",
+    "11:00",
+    "11:40",
+    "12:20",
+    "13:00",
+    "13:40",
+    "14:20",
+    "15:00",
+    "15:40",
+    "16:20",
+    "17:00",
+  ];
 
   // COMPARISON MODULES --------------------------------------------------------
 
@@ -81,29 +114,6 @@ actor {
       #equal;
     };
   };
-
-  // STORAGE -------------------------------------------------------------------
-
-  let profileStore = Map.empty<Principal, UserProfile>();
-  let chatStore = Map.empty<Principal, MessageHistory>();
-  let bookingStore = Map.empty<Nat, Booking>();
-  var nextBookingId = 1;
-
-  let timeSlots = [
-    "09:00",
-    "09:40",
-    "10:20",
-    "11:00",
-    "11:40",
-    "12:20",
-    "13:00",
-    "13:40",
-    "14:20",
-    "15:00",
-    "15:40",
-    "16:20",
-    "17:00",
-  ];
 
   // USER PROFILES -------------------------------------------------------------
 
@@ -136,24 +146,27 @@ actor {
   };
 
   // CHAT MESSAGES -------------------------------------------------------------
-  public shared ({ caller }) func sendMessageToCoach(message : Text) : async () {
+
+  public shared ({ caller }) func sendMessageToCoach(message : Text, messageType : MessageType, blobId : ?Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can send messages");
     };
-    sendMessageInternal(caller, #user, message);
+    sendMessageInternal(caller, #user, message, messageType, blobId);
   };
 
-  public shared ({ caller }) func sendMessageToUser(user : Principal, message : Text) : async () {
+  public shared ({ caller }) func sendMessageToUser(user : Principal, message : Text, messageType : MessageType, blobId : ?Text) : async () {
     if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only admins/coaches can send messages to users");
     };
-    sendMessageInternal(user, #coach, message);
+    sendMessageInternal(user, #coach, message, messageType, blobId);
   };
 
-  func sendMessageInternal(user : Principal, role : SenderRole, message : Text) {
+  func sendMessageInternal(user : Principal, role : SenderRole, message : Text, messageType : MessageType, blobId : ?Text) {
     let newMessage : Message = {
       senderRole = role;
       message;
+      messageType;
+      blobId;
       timestamp = Time.now();
     };
 
@@ -181,7 +194,7 @@ actor {
   };
 
   public query ({ caller }) func getUserMessageHistory(user : Principal) : async [Message] {
-    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+    if (caller != user and not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Can only view your own messages");
     };
     let history = switch (chatStore.get(user)) {
@@ -189,6 +202,15 @@ actor {
       case (?history) { history };
     };
     history.toArray().sort();
+  };
+
+  // CHAT ADMIN FUNCTIONS
+
+  public query ({ caller }) func getAllUsers() : async [Principal] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can fetch all users");
+    };
+    chatStore.keys().toArray();
   };
 
   // APPOINTMENT SCHEDULING ----------------------------------------------------
@@ -294,14 +316,49 @@ actor {
   // ADMIN/COACH FUNCTIONS -----------------------------------------------------
 
   public query ({ caller }) func getAllBookingsByUser(user : Principal) : async [Booking] {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only coaches can fetch all bookings");
     };
-    bookingStore.values().toArray().filter(func(b) { b.user == user }).sort();
+    bookingStore.values().toArray().filter(
+      func(b) { b.user == user }
+    );
+  };
+
+  public query ({ caller }) func getAllBookings() : async [Booking] {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+      Runtime.trap("Unauthorized: Only admins can fetch all bookings");
+    };
+    bookingStore.values().toArray();
+  };
+
+  public shared ({ caller }) func adminCancelBooking(bookingId : Nat) : async () {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
+      Runtime.trap("Unauthorized: Only admins can cancel any booking");
+    };
+
+    switch (bookingStore.get(bookingId)) {
+      case (null) { Runtime.trap("Booking not found") };
+      case (?booking) {
+        if (booking.status == #cancelled) {
+          Runtime.trap("Booking is already cancelled");
+        };
+
+        let updatedBooking : Booking = {
+          id = booking.id;
+          user = booking.user;
+          date = booking.date;
+          timeSlot = booking.timeSlot;
+          status = #cancelled;
+          timestamp = Time.now();
+        };
+
+        bookingStore.add(bookingId, updatedBooking);
+      };
+    };
   };
 
   public shared ({ caller }) func cancelAllBookingsForUser(user : Principal) : async () {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only coaches can cancel all bookings for a user");
     };
 
@@ -321,7 +378,7 @@ actor {
   };
 
   public query ({ caller }) func getAllBookingsForDate(date : Text) : async [Booking] {
-    if (not AccessControl.isAdmin(accessControlState, caller)) {
+    if (not (AccessControl.isAdmin(accessControlState, caller))) {
       Runtime.trap("Unauthorized: Only coaches can fetch all bookings for a date");
     };
     bookingStore.values().toArray().filter(

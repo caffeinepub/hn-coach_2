@@ -21,10 +21,15 @@ export interface Booking {
 export type BookingStatus = { 'cancelled' : null } |
   { 'booked' : null };
 export interface Message {
+  'messageType' : MessageType,
   'message' : string,
   'timestamp' : bigint,
+  'blobId' : [] | [string],
   'senderRole' : SenderRole,
 }
+export type MessageType = { 'file' : null } |
+  { 'text' : null } |
+  { 'image' : null };
 export type SenderRole = { 'coach' : null } |
   { 'user' : null };
 export interface UserProfile {
@@ -68,13 +73,16 @@ export interface _SERVICE {
   >,
   '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'adminCancelBooking' : ActorMethod<[bigint], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'bookAppointment' : ActorMethod<[string, string], bigint>,
   'cancelAllBookingsForUser' : ActorMethod<[Principal], undefined>,
   'cancelBooking' : ActorMethod<[bigint], undefined>,
+  'getAllBookings' : ActorMethod<[], Array<Booking>>,
   'getAllBookingsByUser' : ActorMethod<[Principal], Array<Booking>>,
   'getAllBookingsForDate' : ActorMethod<[string], Array<Booking>>,
   'getAllProfiles' : ActorMethod<[], Array<UserProfile>>,
+  'getAllUsers' : ActorMethod<[], Array<Principal>>,
   'getAvailableTimeSlots' : ActorMethod<[string], Array<[string, boolean]>>,
   'getBookingsByDate' : ActorMethod<[string], Array<Booking>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
@@ -85,8 +93,14 @@ export interface _SERVICE {
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveUserProfile' : ActorMethod<[UserProfile], undefined>,
-  'sendMessageToCoach' : ActorMethod<[string], undefined>,
-  'sendMessageToUser' : ActorMethod<[Principal, string], undefined>,
+  'sendMessageToCoach' : ActorMethod<
+    [string, MessageType, [] | [string]],
+    undefined
+  >,
+  'sendMessageToUser' : ActorMethod<
+    [Principal, string, MessageType, [] | [string]],
+    undefined
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

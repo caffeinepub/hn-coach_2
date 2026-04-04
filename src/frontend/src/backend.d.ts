@@ -8,8 +8,10 @@ export interface None {
 }
 export type Option<T> = Some<T> | None;
 export interface Message {
+    messageType: MessageType;
     message: string;
     timestamp: bigint;
+    blobId?: string;
     senderRole: SenderRole;
 }
 export interface Booking {
@@ -34,6 +36,11 @@ export enum BookingStatus {
     cancelled = "cancelled",
     booked = "booked"
 }
+export enum MessageType {
+    file = "file",
+    text = "text",
+    image = "image"
+}
 export enum SenderRole {
     coach = "coach",
     user = "user"
@@ -44,13 +51,16 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
+    adminCancelBooking(bookingId: bigint): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     bookAppointment(date: string, timeSlot: string): Promise<bigint>;
     cancelAllBookingsForUser(user: Principal): Promise<void>;
     cancelBooking(bookingId: bigint): Promise<void>;
+    getAllBookings(): Promise<Array<Booking>>;
     getAllBookingsByUser(user: Principal): Promise<Array<Booking>>;
     getAllBookingsForDate(date: string): Promise<Array<Booking>>;
     getAllProfiles(): Promise<Array<UserProfile>>;
+    getAllUsers(): Promise<Array<Principal>>;
     getAvailableTimeSlots(date: string): Promise<Array<[string, boolean]>>;
     getBookingsByDate(date: string): Promise<Array<Booking>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -61,6 +71,6 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveUserProfile(profile: UserProfile): Promise<void>;
-    sendMessageToCoach(message: string): Promise<void>;
-    sendMessageToUser(user: Principal, message: string): Promise<void>;
+    sendMessageToCoach(message: string, messageType: MessageType, blobId: string | null): Promise<void>;
+    sendMessageToUser(user: Principal, message: string, messageType: MessageType, blobId: string | null): Promise<void>;
 }

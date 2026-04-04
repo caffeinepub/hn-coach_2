@@ -1,24 +1,131 @@
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { Loader2, MessageCircle, Send } from "lucide-react";
+import {
+  FileText,
+  Loader2,
+  MessageCircle,
+  Paperclip,
+  Send,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { SenderRole } from "../backend";
+import { MessageType, SenderRole } from "../backend";
 import { Footer } from "../components/Footer";
 import { NavBar } from "../components/NavBar";
 import { ProtectedRoute } from "../components/ProtectedRoute";
+import { loadConfig } from "../config";
+import { useActor } from "../hooks/useActor";
 import {
   useGetMessageHistory,
   useSendMessageToCoach,
 } from "../hooks/useQueries";
+import { StorageClient } from "../utils/StorageClient";
+
+function FileMessage({
+  blobId,
+  storageClient,
+  filename,
+}: {
+  blobId: string;
+  storageClient: StorageClient | null;
+  filename?: string;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!storageClient || !blobId) return;
+    storageClient
+      .getDirectURL(blobId)
+      .then((u) => setUrl(u))
+      .catch(() => {});
+  }, [blobId, storageClient]);
+
+  if (!url)
+    return (
+      <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#FF6A00" }} />
+    );
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:opacity-80 transition-opacity"
+      style={{ background: "rgba(255,106,0,0.15)", color: "#FF6A00" }}
+    >
+      <FileText className="w-4 h-4 flex-shrink-0" />
+      <span className="text-sm truncate max-w-[200px]">
+        {filename || "Download file"}
+      </span>
+    </a>
+  );
+}
+
+function ImageMessage({
+  blobId,
+  storageClient,
+}: {
+  blobId: string;
+  storageClient: StorageClient | null;
+}) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!storageClient || !blobId) return;
+    storageClient
+      .getDirectURL(blobId)
+      .then((u) => setUrl(u))
+      .catch(() => {});
+  }, [blobId, storageClient]);
+
+  if (!url)
+    return (
+      <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#FF6A00" }} />
+    );
+
+  return (
+    <img
+      src={url}
+      alt="Shared file"
+      className="rounded-lg max-w-full max-h-64 object-cover"
+      style={{ border: "1px solid #203B4D" }}
+    />
+  );
+}
 
 export function ChatPage() {
   const { data: messages, isLoading } = useGetMessageHistory();
   const sendMessage = useSendMessageToCoach();
+  const { actor, isFetching } = useActor();
   const [input, setInput] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [storageClient, setStorageClient] = useState<StorageClient | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!actor || isFetching) return;
+    loadConfig().then((config) => {
+      import("@icp-sdk/core/agent").then(({ HttpAgent }) => {
+        const agent = new HttpAgent({ host: config.backend_host });
+        if (config.backend_host?.includes("localhost")) {
+          agent.fetchRootKey().catch(() => {});
+        }
+        const sc = new StorageClient(
+          config.bucket_name,
+          config.storage_gateway_url,
+          config.backend_canister_id,
+          config.project_id,
+          agent,
+        );
+        setStorageClient(sc);
+      });
+    });
+  }, [actor, isFetching]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -26,17 +133,56 @@ export function ChatPage() {
     }
   });
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text) return;
+  const handleSend = async (
+    messageText?: string,
+    msgType?: MessageType,
+    blobId?: string | null,
+  ) => {
+    const text = messageText ?? input.trim();
+    if (!text && !blobId) return;
 
-    setInput("");
+    if (!messageText) setInput("");
     try {
-      await sendMessage.mutateAsync(text);
+      await sendMessage.mutateAsync({
+        message: text,
+        messageType: msgType ?? MessageType.text,
+        blobId: blobId ?? null,
+      });
     } catch (err) {
       console.error("Send failed:", err);
       toast.error("Failed to send message");
-      setInput(text);
+      if (!messageText) setInput(text);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!storageClient) {
+      toast.error("Storage not ready, please try again");
+      return;
+    }
+
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    if (!isPdf && !isImage) {
+      toast.error("Only images and PDFs are supported");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const { hash } = await storageClient.putFile(bytes);
+      const msgType = isImage ? MessageType.image : MessageType.file;
+      await handleSend(file.name, msgType, hash);
+      toast.success("File sent!");
+    } catch (err) {
+      console.error("File upload failed:", err);
+      toast.error("Failed to upload file");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -180,10 +326,14 @@ export function ChatPage() {
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.25 }}
-                              className={`flex mb-3 ${isUser ? "justify-end" : "justify-start"}`}
+                              className={`flex mb-3 ${
+                                isUser ? "justify-end" : "justify-start"
+                              }`}
                             >
                               <div
-                                className={`max-w-[80%] sm:max-w-[65%] ${isUser ? "items-end" : "items-start"} flex flex-col`}
+                                className={`max-w-[80%] sm:max-w-[65%] ${
+                                  isUser ? "items-end" : "items-start"
+                                } flex flex-col`}
                               >
                                 {!isUser && (
                                   <span
@@ -205,7 +355,22 @@ export function ChatPage() {
                                       : undefined,
                                   }}
                                 >
-                                  {msg.message}
+                                  {msg.messageType === MessageType.image &&
+                                  msg.blobId ? (
+                                    <ImageMessage
+                                      blobId={msg.blobId}
+                                      storageClient={storageClient}
+                                    />
+                                  ) : msg.messageType === MessageType.file &&
+                                    msg.blobId ? (
+                                    <FileMessage
+                                      blobId={msg.blobId}
+                                      storageClient={storageClient}
+                                      filename={msg.message}
+                                    />
+                                  ) : (
+                                    msg.message
+                                  )}
                                 </div>
                                 <span
                                   className="text-xs mt-1 px-1"
@@ -228,7 +393,35 @@ export function ChatPage() {
                 className="border-t border-hnc-border p-4"
                 style={{ background: "#0B2232" }}
               >
-                <div className="flex items-end gap-3">
+                <div className="flex items-end gap-2">
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,application/pdf"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    data-ocid="chat.upload_button"
+                  />
+                  {/* Attach button */}
+                  <Button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading || !storageClient}
+                    className="w-11 h-11 p-0 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: "#1A3A4F",
+                      border: "1px solid #203B4D",
+                      color: isUploading ? "#FF6A00" : "#A8B6C3",
+                    }}
+                    title="Attach image or PDF"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Paperclip className="w-4 h-4" />
+                    )}
+                  </Button>
                   <textarea
                     ref={textareaRef}
                     value={input}
@@ -241,7 +434,7 @@ export function ChatPage() {
                     data-ocid="chat.input"
                   />
                   <Button
-                    onClick={handleSend}
+                    onClick={() => handleSend()}
                     disabled={!input.trim() || sendMessage.isPending}
                     className="w-11 h-11 p-0 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
                     style={{ background: "#FF6A00" }}
@@ -255,7 +448,8 @@ export function ChatPage() {
                   </Button>
                 </div>
                 <p className="text-xs mt-2" style={{ color: "#A8B6C3" }}>
-                  Press Enter to send &bull; Shift+Enter for new line
+                  Press Enter to send &bull; Shift+Enter for new line &bull;
+                  Attach images or PDFs with the paperclip
                 </p>
               </div>
             </div>

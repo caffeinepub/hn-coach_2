@@ -1,41 +1,59 @@
-# HN Coach App
+# HN Coach — Admin Panel + File Sharing
 
 ## Current State
-New project — no existing application files.
+- 6-page app: Login, Signup, Home, Profile, Chat, Book Appointment
+- Dark navy + orange theme (#0B2232 background, #FF6A00 accent)
+- Backend: Motoko with UserProfile, Message (text only), Booking, Authorization (role-based)
+- Chat: user sends text to coach, polls every 5s, coach replies via admin
+- Blob-storage component already included for avatar uploads
+- Backend already has `sendMessageToUser`, `getUserMessageHistory`, `getAllProfiles`, `getAllBookingsForDate`, admin checks via AccessControl
 
 ## Requested Changes (Diff)
 
 ### Add
-- Authentication: Login and Signup pages with form validation
-- User Profile page: editable fields (name, age, WhatsApp number, email, weight, height, target/goal) plus uploadable avatar image
-- Homepage (post-login): two action cards — "Chat with Coach" and "Book Appointment"
-- Chat page: messaging UI with send/receive bubbles, timestamps, and chat history stored in backend
-- Book Appointment page: calendar view to select date, list of 40-minute time slots, booking confirmation, upcoming bookings list
-- Top navigation bar: HN Coach logo/brand, profile icon, logout button
-- Backend storage for: user profiles, chat messages, appointment bookings
+- Coach Admin Panel (`/admin` route) — password-protected with hardcoded password "hncoach2024" (localStorage session)
+  - List all users who have messaged (show name/principal from profile if available)
+  - Select a user to open their conversation thread
+  - Reply to selected user's messages (calls `sendMessageToUser`)
+  - View all bookings section — list all bookings with user info, date/time, status; allow cancel/reschedule
+  - Cancel booking from admin panel (calls `cancelBooking` on behalf — or new admin cancel endpoint)
+- File/image sharing in Chat (both user and coach sides)
+  - User can attach image or PDF in chat — upload via blob-storage, send message with blobId reference
+  - Coach sees file messages in admin panel — images display inline, PDFs as clickable links
+  - Message type extended: `messageType` field (#text, #image, #file), `blobId` optional field
+- Admin panel shows file attachments inline in conversation view
 
 ### Modify
-- N/A (new project)
+- Backend `Message` type: add optional `blobId: ?Text` and `messageType: MessageType` (#text | #image | #file)
+- `sendMessageToCoach` accepts optional blobId and messageType
+- `sendMessageToUser` accepts optional blobId and messageType
+- Backend: add `getAllUsers` query for admin to list principals who have messages
+- Backend: add `adminCancelBooking` that allows admin to cancel any booking by id
+- Backend: add `getAllBookings` for admin to get all bookings across all users
+- ChatPage: add file attachment button (image + PDF), upload to blob storage, show file previews in message bubbles
+- App.tsx: add `/admin` route
 
 ### Remove
-- N/A (new project)
+- Nothing removed
 
 ## Implementation Plan
-
-### Backend (Motoko)
-- User profile actor: store name, age, WhatsApp, email, weight, height, target/goal, avatar blob reference
-- Chat messages actor: store messages per user (userId, text, timestamp, sender role: user/coach)
-- Appointments actor: store bookings per user (userId, date, timeSlot, status: booked/cancelled)
-- Available time slots generator: return 40-minute slots for a given date (e.g. 9:00, 9:40, 10:20 ... 17:00)
-- Authorization integration: login/signup with identity-based access
-- Blob storage integration: avatar image upload/retrieve
-
-### Frontend (React + TypeScript + Tailwind)
-- Auth pages: Login and Signup with form inputs and error handling
-- Route protection: redirect unauthenticated users to login
-- Profile page: form with all profile fields, avatar uploader
-- Homepage: two large action cards with icons
-- Chat page: scrollable message thread, input bar with send button, live updates
-- Appointments page: calendar date picker, available time slot grid, confirm booking button, upcoming bookings section
-- Navbar component: logo, profile avatar, logout
-- Responsive layout for mobile and desktop
+1. Update Motoko backend:
+   - Add `MessageType` variant (#text | #image | #file)
+   - Add optional `blobId` field to `Message`
+   - Update `sendMessageToCoach` and `sendMessageToUser` to accept blobId + messageType
+   - Add `getAllUsers` (admin only) — returns all principals with message history
+   - Add `getAllBookings` (admin only) — returns all bookings
+   - Add `adminCancelBooking(bookingId: Nat)` (admin only)
+2. Frontend:
+   - Add `AdminPage.tsx` with password gate ("hncoach2024" in localStorage)
+     - Users list panel on left
+     - Conversation view on right for selected user
+     - Reply input at bottom
+     - Bookings tab: table of all bookings with cancel action
+   - Update `ChatPage.tsx`:
+     - Add paperclip/attach button next to send
+     - File picker accepts image/* and application/pdf
+     - Upload file to blob-storage, get blobId, send message with blobId + type
+     - Render image messages as inline img, PDF messages as file link
+   - Update `useQueries.ts` with new hooks
+   - Update `App.tsx` to add `/admin` route (no ProtectedRoute — uses password gate)

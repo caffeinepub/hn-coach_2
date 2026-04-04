@@ -1,0 +1,1079 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Principal } from "@icp-sdk/core/principal";
+import { format } from "date-fns";
+import {
+  AlertCircle,
+  Dumbbell,
+  FileText,
+  Loader2,
+  Lock,
+  MessageSquare,
+  Paperclip,
+  Send,
+  Users,
+  XCircle,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { BookingStatus, MessageType, SenderRole } from "../backend";
+import type { Booking, Message } from "../backend";
+import { loadConfig } from "../config";
+import { useActor } from "../hooks/useActor";
+import {
+  useAdminCancelBooking,
+  useGetAllBookings,
+  useGetAllUsers,
+  useGetUserMessageHistoryAdmin,
+  useGetUserProfile,
+  useSendMessageToUser,
+} from "../hooks/useQueries";
+import { StorageClient } from "../utils/StorageClient";
+
+const ADMIN_PASSWORD = "hncoach2024";
+const ADMIN_AUTH_KEY = "hncoach_admin_auth";
+
+// ─── Sub-components ─────────────────────────────────────────────────────────
+
+function AdminFileMessage({
+  blobId,
+  storageClient,
+  filename,
+}: { blobId: string; storageClient: StorageClient | null; filename?: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!storageClient || !blobId) return;
+    storageClient
+      .getDirectURL(blobId)
+      .then((u) => setUrl(u))
+      .catch(() => {});
+  }, [blobId, storageClient]);
+
+  if (!url)
+    return (
+      <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#FF6A00" }} />
+    );
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:opacity-80 transition-opacity"
+      style={{ background: "rgba(255,106,0,0.15)", color: "#FF6A00" }}
+    >
+      <FileText className="w-4 h-4 flex-shrink-0" />
+      <span className="text-sm truncate max-w-[200px]">
+        {filename || "Download file"}
+      </span>
+    </a>
+  );
+}
+
+function AdminImageMessage({
+  blobId,
+  storageClient,
+}: { blobId: string; storageClient: StorageClient | null }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!storageClient || !blobId) return;
+    storageClient
+      .getDirectURL(blobId)
+      .then((u) => setUrl(u))
+      .catch(() => {});
+  }, [blobId, storageClient]);
+
+  if (!url)
+    return (
+      <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#FF6A00" }} />
+    );
+
+  return (
+    <img
+      src={url}
+      alt="Shared file"
+      className="rounded-lg max-w-full max-h-48 object-cover"
+      style={{ border: "1px solid #203B4D" }}
+    />
+  );
+}
+
+function UserListItem({
+  principal,
+  isSelected,
+  onClick,
+}: {
+  principal: Principal;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const { data: profile } = useGetUserProfile(principal);
+  const shortId = `${principal.toString().slice(0, 12)}...`;
+  const displayName = profile?.name || `User: ${shortId}`;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left px-4 py-3 rounded-xl transition-all flex items-center gap-3 group"
+      style={{
+        background: isSelected ? "rgba(255,106,0,0.15)" : "transparent",
+        border: isSelected
+          ? "1px solid rgba(255,106,0,0.4)"
+          : "1px solid transparent",
+      }}
+    >
+      <div
+        className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs text-white"
+        style={{ background: isSelected ? "#FF6A00" : "#1A3A4F" }}
+      >
+        {(profile?.name?.[0] || "U").toUpperCase()}
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-white truncate">{displayName}</p>
+        {profile?.name && (
+          <p className="text-xs truncate" style={{ color: "#A8B6C3" }}>
+            {shortId}
+          </p>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function ConversationPanel({
+  selectedUser,
+  storageClient,
+}: {
+  selectedUser: Principal | null;
+  storageClient: StorageClient | null;
+}) {
+  const { data: profile } = useGetUserProfile(selectedUser);
+  const { data: messages, isLoading } =
+    useGetUserMessageHistoryAdmin(selectedUser);
+  const sendToUser = useSendMessageToUser();
+  const [replyText, setReplyText] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSendReply = async (
+    text?: string,
+    msgType?: MessageType,
+    blobId?: string | null,
+  ) => {
+    if (!selectedUser) return;
+    const messageText = text ?? replyText.trim();
+    if (!messageText && !blobId) return;
+
+    if (!text) setReplyText("");
+    try {
+      await sendToUser.mutateAsync({
+        user: selectedUser,
+        message: messageText,
+        messageType: msgType ?? MessageType.text,
+        blobId: blobId ?? null,
+      });
+    } catch (err) {
+      console.error("Send failed:", err);
+      toast.error("Failed to send reply");
+      if (!text) setReplyText(messageText);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!storageClient) {
+      toast.error("Storage not ready");
+      return;
+    }
+
+    const isPdf = file.type === "application/pdf";
+    const isImage = file.type.startsWith("image/");
+    if (!isPdf && !isImage) {
+      toast.error("Only images and PDFs are supported");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const { hash } = await storageClient.putFile(bytes);
+      const msgType = isImage ? MessageType.image : MessageType.file;
+      await handleSendReply(file.name, msgType, hash);
+      toast.success("File sent!");
+    } catch (err) {
+      console.error("Upload failed:", err);
+      toast.error("Failed to upload file");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendReply();
+    }
+  };
+
+  const formatTime = (ts: bigint) => {
+    try {
+      return format(new Date(Number(ts / BigInt(1_000_000))), "h:mm a");
+    } catch {
+      return "";
+    }
+  };
+
+  const formatDateLabel = (ts: bigint) => {
+    try {
+      return format(new Date(Number(ts / BigInt(1_000_000))), "MMMM d, yyyy");
+    } catch {
+      return "";
+    }
+  };
+
+  const groupedMessages: Array<{ date: string; messages: Message[] }> = [];
+  if (messages) {
+    for (const msg of messages) {
+      const date = formatDateLabel(msg.timestamp);
+      const last = groupedMessages[groupedMessages.length - 1];
+      if (!last || last.date !== date) {
+        groupedMessages.push({ date, messages: [msg] });
+      } else {
+        last.messages.push(msg);
+      }
+    }
+  }
+
+  if (!selectedUser) {
+    return (
+      <div
+        className="flex-1 flex flex-col items-center justify-center"
+        style={{ background: "#112A3A" }}
+      >
+        <MessageSquare
+          className="w-12 h-12 mb-3 opacity-20"
+          style={{ color: "#FF6A00" }}
+        />
+        <p className="text-white font-medium">
+          Select a user to view conversation
+        </p>
+        <p className="text-sm mt-1" style={{ color: "#A8B6C3" }}>
+          Choose from the user list on the left
+        </p>
+      </div>
+    );
+  }
+
+  const displayName =
+    profile?.name || `User: ${selectedUser.toString().slice(0, 12)}...`;
+
+  return (
+    <div className="flex-1 flex flex-col" style={{ background: "#112A3A" }}>
+      {/* Conversation header */}
+      <div
+        className="px-4 py-3 border-b flex items-center gap-3"
+        style={{ borderColor: "#203B4D", background: "#0D2030" }}
+      >
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+          style={{ background: "#FF6A00" }}
+        >
+          {(profile?.name?.[0] || "U").toUpperCase()}
+        </div>
+        <div>
+          <p className="text-white font-semibold text-sm">{displayName}</p>
+          {profile?.email && (
+            <p className="text-xs" style={{ color: "#A8B6C3" }}>
+              {profile.email}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-4 space-y-3"
+        style={{ maxHeight: "calc(100vh - 380px)" }}
+        data-ocid="admin.messages.panel"
+      >
+        {isLoading ? (
+          <div className="flex items-center justify-center h-24">
+            <Loader2
+              className="w-5 h-5 animate-spin"
+              style={{ color: "#FF6A00" }}
+              data-ocid="admin.messages.loading_state"
+            />
+          </div>
+        ) : !messages || messages.length === 0 ? (
+          <div
+            className="flex flex-col items-center justify-center h-32 text-center"
+            data-ocid="admin.messages.empty_state"
+          >
+            <MessageSquare
+              className="w-10 h-10 mb-2 opacity-20"
+              style={{ color: "#FF6A00" }}
+            />
+            <p className="text-sm" style={{ color: "#A8B6C3" }}>
+              No messages yet
+            </p>
+          </div>
+        ) : (
+          <AnimatePresence initial={false}>
+            {groupedMessages.map((group) => (
+              <div key={group.date}>
+                <div className="flex items-center gap-2 my-3">
+                  <div
+                    className="flex-1 border-t"
+                    style={{ borderColor: "#203B4D" }}
+                  />
+                  <span className="text-xs px-2" style={{ color: "#A8B6C3" }}>
+                    {group.date}
+                  </span>
+                  <div
+                    className="flex-1 border-t"
+                    style={{ borderColor: "#203B4D" }}
+                  />
+                </div>
+                {group.messages.map((msg, i) => {
+                  const isCoach = msg.senderRole === SenderRole.coach;
+                  return (
+                    <motion.div
+                      key={`${msg.timestamp}-${i}`}
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className={`flex mb-2 ${isCoach ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[75%] flex flex-col ${isCoach ? "items-end" : "items-start"}`}
+                      >
+                        {!isCoach && (
+                          <span
+                            className="text-xs mb-1 font-medium"
+                            style={{ color: "#A8B6C3" }}
+                          >
+                            {displayName}
+                          </span>
+                        )}
+                        {isCoach && (
+                          <span
+                            className="text-xs mb-1 font-medium"
+                            style={{ color: "#FF6A00" }}
+                          >
+                            You (Coach)
+                          </span>
+                        )}
+                        <div
+                          className="px-3 py-2.5 rounded-2xl text-sm text-white"
+                          style={{
+                            background: isCoach ? "#FF6A00" : "#1A3A4F",
+                            borderBottomRightRadius: isCoach
+                              ? "4px"
+                              : undefined,
+                            borderBottomLeftRadius: !isCoach
+                              ? "4px"
+                              : undefined,
+                          }}
+                        >
+                          {msg.messageType === MessageType.image &&
+                          msg.blobId ? (
+                            <AdminImageMessage
+                              blobId={msg.blobId}
+                              storageClient={storageClient}
+                            />
+                          ) : msg.messageType === MessageType.file &&
+                            msg.blobId ? (
+                            <AdminFileMessage
+                              blobId={msg.blobId}
+                              storageClient={storageClient}
+                              filename={msg.message}
+                            />
+                          ) : (
+                            msg.message
+                          )}
+                        </div>
+                        <span
+                          className="text-xs mt-1 px-1"
+                          style={{ color: "#A8B6C3" }}
+                        >
+                          {formatTime(msg.timestamp)}
+                        </span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            ))}
+          </AnimatePresence>
+        )}
+      </div>
+
+      {/* Reply input */}
+      <div
+        className="border-t p-3"
+        style={{ borderColor: "#203B4D", background: "#0D2030" }}
+      >
+        <div className="flex items-end gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <Button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading || !storageClient}
+            className="w-10 h-10 p-0 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: "#1A3A4F",
+              border: "1px solid #203B4D",
+              color: isUploading ? "#FF6A00" : "#A8B6C3",
+            }}
+            title="Attach image or PDF"
+            data-ocid="admin.messages.upload_button"
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Paperclip className="w-4 h-4" />
+            )}
+          </Button>
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Reply as coach..."
+            rows={1}
+            className="flex-1 rounded-xl px-3 py-2.5 text-sm text-white resize-none outline-none border transition-colors min-h-[40px] max-h-28 overflow-y-auto"
+            style={{
+              background: "#1A3A4F",
+              borderColor: "#203B4D",
+              color: "white",
+            }}
+            data-ocid="admin.messages.textarea"
+          />
+          <Button
+            onClick={() => handleSendReply()}
+            disabled={!replyText.trim() || sendToUser.isPending}
+            className="w-10 h-10 p-0 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
+            style={{ background: "#FF6A00" }}
+            data-ocid="admin.messages.submit_button"
+          >
+            {sendToUser.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookingsTab() {
+  const { data: bookings, isLoading } = useGetAllBookings();
+  const cancelBooking = useAdminCancelBooking();
+
+  const sortedBookings = useMemo(() => {
+    if (!bookings) return [];
+    return [...bookings].sort((a, b) => {
+      const dateA = new Date(`${a.date} ${a.timeSlot}`).getTime();
+      const dateB = new Date(`${b.date} ${b.timeSlot}`).getTime();
+      return dateB - dateA;
+    });
+  }, [bookings]);
+
+  const handleCancel = async (bookingId: bigint) => {
+    try {
+      await cancelBooking.mutateAsync(bookingId);
+      toast.success("Booking cancelled");
+    } catch {
+      toast.error("Failed to cancel booking");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div
+        className="flex items-center justify-center py-16"
+        data-ocid="admin.bookings.loading_state"
+      >
+        <Loader2
+          className="w-6 h-6 animate-spin"
+          style={{ color: "#FF6A00" }}
+        />
+      </div>
+    );
+  }
+
+  if (!sortedBookings.length) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center py-16 text-center"
+        data-ocid="admin.bookings.empty_state"
+      >
+        <Users
+          className="w-12 h-12 mb-3 opacity-20"
+          style={{ color: "#FF6A00" }}
+        />
+        <p className="text-white font-medium">No bookings yet</p>
+        <p className="text-sm mt-1" style={{ color: "#A8B6C3" }}>
+          Bookings will appear here once users schedule appointments
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden border"
+      style={{ borderColor: "#203B4D" }}
+      data-ocid="admin.bookings.table"
+    >
+      <Table>
+        <TableHeader>
+          <TableRow style={{ background: "#0D2030", borderColor: "#203B4D" }}>
+            <TableHead className="text-white font-semibold">User</TableHead>
+            <TableHead className="text-white font-semibold">Date</TableHead>
+            <TableHead className="text-white font-semibold">Time</TableHead>
+            <TableHead className="text-white font-semibold">Status</TableHead>
+            <TableHead className="text-white font-semibold">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedBookings.map((booking: Booking, idx: number) => (
+            <TableRow
+              key={booking.id.toString()}
+              style={{
+                borderColor: "#203B4D",
+                background: idx % 2 === 0 ? "#112A3A" : "#0F2535",
+              }}
+              data-ocid={`admin.bookings.row.${idx + 1}`}
+            >
+              <TableCell>
+                <BookingUserCell user={booking.user} />
+              </TableCell>
+              <TableCell className="text-white">{booking.date}</TableCell>
+              <TableCell className="text-white">{booking.timeSlot}</TableCell>
+              <TableCell>
+                <Badge
+                  className="font-semibold text-xs"
+                  style={{
+                    background:
+                      booking.status === BookingStatus.booked
+                        ? "rgba(34,197,94,0.15)"
+                        : "rgba(239,68,68,0.15)",
+                    color:
+                      booking.status === BookingStatus.booked
+                        ? "#4ade80"
+                        : "#f87171",
+                    border: `1px solid ${
+                      booking.status === BookingStatus.booked
+                        ? "rgba(74,222,128,0.3)"
+                        : "rgba(248,113,113,0.3)"
+                    }`,
+                  }}
+                >
+                  {booking.status === BookingStatus.booked
+                    ? "Booked"
+                    : "Cancelled"}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                {booking.status === BookingStatus.booked && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleCancel(booking.id)}
+                    disabled={cancelBooking.isPending}
+                    className="text-xs font-semibold h-7 px-3"
+                    style={{
+                      background: "rgba(239,68,68,0.15)",
+                      border: "1px solid rgba(248,113,113,0.3)",
+                      color: "#f87171",
+                    }}
+                    data-ocid={`admin.bookings.delete_button.${idx + 1}`}
+                  >
+                    {cancelBooking.isPending ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <XCircle className="w-3 h-3 mr-1" />
+                    )}
+                    Cancel
+                  </Button>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function BookingUserCell({ user }: { user: Principal }) {
+  const { data: profile } = useGetUserProfile(user);
+  return (
+    <div>
+      <p className="text-white text-sm font-medium">
+        {profile?.name || "Unknown"}
+      </p>
+      <p className="text-xs" style={{ color: "#A8B6C3" }}>
+        {user.toString().slice(0, 14)}...
+      </p>
+    </div>
+  );
+}
+
+function MessagesTab({
+  storageClient,
+}: { storageClient: StorageClient | null }) {
+  const { data: users, isLoading: usersLoading } = useGetAllUsers();
+  const [selectedUser, setSelectedUser] = useState<Principal | null>(null);
+
+  return (
+    <div
+      className="flex h-full min-h-[500px] rounded-xl overflow-hidden border"
+      style={{ borderColor: "#203B4D" }}
+      data-ocid="admin.messages.panel"
+    >
+      {/* User list sidebar */}
+      <div
+        className="w-64 flex-shrink-0 border-r flex flex-col"
+        style={{ borderColor: "#203B4D", background: "#0D2030" }}
+      >
+        <div className="px-4 py-3 border-b" style={{ borderColor: "#203B4D" }}>
+          <p className="text-sm font-semibold text-white">Users</p>
+          <p className="text-xs mt-0.5" style={{ color: "#A8B6C3" }}>
+            {users?.length ?? 0} total
+          </p>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-2 space-y-1">
+            {usersLoading ? (
+              <div
+                className="flex justify-center py-8"
+                data-ocid="admin.users.loading_state"
+              >
+                <Loader2
+                  className="w-5 h-5 animate-spin"
+                  style={{ color: "#FF6A00" }}
+                />
+              </div>
+            ) : !users || users.length === 0 ? (
+              <div
+                className="text-center py-8"
+                data-ocid="admin.users.empty_state"
+              >
+                <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                  No users yet
+                </p>
+              </div>
+            ) : (
+              users.map((u: Principal) => (
+                <UserListItem
+                  key={u.toString()}
+                  principal={u}
+                  isSelected={selectedUser?.toString() === u.toString()}
+                  onClick={() => setSelectedUser(u)}
+                />
+              ))
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Conversation panel */}
+      <ConversationPanel
+        selectedUser={selectedUser}
+        storageClient={storageClient}
+      />
+    </div>
+  );
+}
+
+// ─── Password Gate ───────────────────────────────────────────────────────────
+
+function PasswordGate({ onAuth }: { onAuth: () => void }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isChecking, setIsChecking] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsChecking(true);
+    setTimeout(() => {
+      if (password === ADMIN_PASSWORD) {
+        localStorage.setItem(ADMIN_AUTH_KEY, "true");
+        onAuth();
+      } else {
+        setError("Incorrect password. Try again.");
+        setPassword("");
+      }
+      setIsChecking(false);
+    }, 400);
+  };
+
+  return (
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: "#0B2232" }}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-md"
+      >
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: "#FF6A00" }}
+          >
+            <Dumbbell className="w-6 h-6 text-white" />
+          </div>
+          <span className="text-white font-display font-bold text-2xl">
+            HN<span style={{ color: "#FF6A00" }}> Coach</span>
+          </span>
+        </div>
+
+        {/* Card */}
+        <div
+          className="rounded-2xl p-8 border shadow-card"
+          style={{ background: "#112A3A", borderColor: "#203B4D" }}
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: "rgba(255,106,0,0.15)" }}
+            >
+              <Lock className="w-5 h-5" style={{ color: "#FF6A00" }} />
+            </div>
+            <div>
+              <h1 className="text-xl font-display font-bold text-white">
+                Coach Admin Access
+              </h1>
+              <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                Enter your admin password to continue
+              </p>
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4"
+            data-ocid="admin.login.dialog"
+          >
+            <div>
+              <Label
+                htmlFor="admin-password"
+                className="block text-sm font-medium text-white mb-2"
+              >
+                Admin Password
+              </Label>
+              <Input
+                id="admin-password"
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError("");
+                }}
+                placeholder="Enter password"
+                className="w-full text-white border"
+                style={{
+                  background: "#1A3A4F",
+                  borderColor: error ? "#f87171" : "#203B4D",
+                  color: "white",
+                }}
+                autoFocus
+                data-ocid="admin.login.input"
+              />
+              {error && (
+                <div
+                  className="flex items-center gap-1.5 mt-2"
+                  data-ocid="admin.login.error_state"
+                >
+                  <AlertCircle
+                    className="w-4 h-4"
+                    style={{ color: "#f87171" }}
+                  />
+                  <p className="text-sm" style={{ color: "#f87171" }}>
+                    {error}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <Button
+              type="submit"
+              disabled={!password || isChecking}
+              className="w-full h-11 font-semibold text-white"
+              style={{ background: "#FF6A00" }}
+              data-ocid="admin.login.submit_button"
+            >
+              {isChecking ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Lock className="w-4 h-4 mr-2" />
+              )}
+              Access Admin Panel
+            </Button>
+          </form>
+
+          <div
+            className="mt-6 pt-5 border-t"
+            style={{ borderColor: "#203B4D" }}
+          >
+            <p className="text-sm text-center" style={{ color: "#A8B6C3" }}>
+              Please log in with your Internet Identity first, then access the
+              admin panel.
+            </p>
+            <div className="mt-3 text-center">
+              <a
+                href="/login"
+                className="text-sm font-medium hover:underline"
+                style={{ color: "#FF6A00" }}
+                data-ocid="admin.login.link"
+              >
+                Go to Login →
+              </a>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Admin Panel ─────────────────────────────────────────────────────────────
+
+function AdminPanel() {
+  const { actor, isFetching } = useActor();
+  const [storageClient, setStorageClient] = useState<StorageClient | null>(
+    null,
+  );
+
+  useEffect(() => {
+    if (!actor || isFetching) return;
+    loadConfig().then((config) => {
+      import("@icp-sdk/core/agent").then(({ HttpAgent }) => {
+        const agent = new HttpAgent({ host: config.backend_host });
+        if (config.backend_host?.includes("localhost")) {
+          agent.fetchRootKey().catch(() => {});
+        }
+        const sc = new StorageClient(
+          config.bucket_name,
+          config.storage_gateway_url,
+          config.backend_canister_id,
+          config.project_id,
+          agent,
+        );
+        setStorageClient(sc);
+      });
+    });
+  }, [actor, isFetching]);
+
+  if (!actor) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: "#0B2232" }}
+      >
+        <div
+          className="w-full max-w-md rounded-2xl p-8 border shadow-card text-center"
+          style={{ background: "#112A3A", borderColor: "#203B4D" }}
+          data-ocid="admin.auth.error_state"
+        >
+          <AlertCircle
+            className="w-12 h-12 mx-auto mb-4"
+            style={{ color: "#FF6A00" }}
+          />
+          <h2 className="text-xl font-display font-bold text-white mb-2">
+            Internet Identity Required
+          </h2>
+          <p className="text-sm mb-6" style={{ color: "#A8B6C3" }}>
+            Please log in with your Internet Identity first, then access the
+            admin panel.
+          </p>
+          {isFetching ? (
+            <Loader2
+              className="w-6 h-6 animate-spin mx-auto"
+              style={{ color: "#FF6A00" }}
+            />
+          ) : (
+            <a
+              href="/login"
+              className="inline-flex items-center justify-center h-11 px-6 rounded-xl font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: "#FF6A00" }}
+              data-ocid="admin.auth.link"
+            >
+              Go to Login
+            </a>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: "#0B2232" }}
+    >
+      {/* Admin header */}
+      <header
+        className="sticky top-0 z-50 w-full border-b"
+        style={{ background: "#071824", borderColor: "#203B4D" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ background: "#FF6A00" }}
+              >
+                <Dumbbell className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white font-display font-bold text-xl tracking-tight">
+                HN<span style={{ color: "#FF6A00" }}> Coach</span>
+              </span>
+              <span
+                className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-widest"
+                style={{
+                  background: "rgba(255,106,0,0.15)",
+                  color: "#FF6A00",
+                  border: "1px solid rgba(255,106,0,0.3)",
+                }}
+              >
+                Admin
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem(ADMIN_AUTH_KEY);
+                window.location.reload();
+              }}
+              className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:opacity-80"
+              style={{ color: "#A8B6C3", border: "1px solid #203B4D" }}
+              data-ocid="admin.logout.button"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="mb-6">
+            <h1 className="text-2xl font-display font-bold text-white">
+              Admin Dashboard
+            </h1>
+            <p className="text-sm mt-1" style={{ color: "#A8B6C3" }}>
+              Manage messages and bookings for all users
+            </p>
+          </div>
+
+          <Tabs
+            defaultValue="messages"
+            className="w-full"
+            data-ocid="admin.tab"
+          >
+            <TabsList
+              className="mb-6 border"
+              style={{ background: "#112A3A", borderColor: "#203B4D" }}
+            >
+              <TabsTrigger
+                value="messages"
+                className="flex items-center gap-2 data-[state=active]:text-white font-medium"
+                style={{ color: "#A8B6C3" }}
+                data-ocid="admin.messages.tab"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Messages
+              </TabsTrigger>
+              <TabsTrigger
+                value="bookings"
+                className="flex items-center gap-2 data-[state=active]:text-white font-medium"
+                style={{ color: "#A8B6C3" }}
+                data-ocid="admin.bookings.tab"
+              >
+                <Users className="w-4 h-4" />
+                Bookings
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="messages">
+              <MessagesTab storageClient={storageClient} />
+            </TabsContent>
+
+            <TabsContent value="bookings">
+              <BookingsTab />
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </main>
+
+      <footer
+        className="mt-auto border-t py-6 text-center text-sm"
+        style={{
+          background: "#071824",
+          borderColor: "#203B4D",
+          color: "#A8B6C3",
+        }}
+      >
+        HN Coach Admin Panel &bull; Coach access only
+      </footer>
+    </div>
+  );
+}
+
+// ─── Main Export ─────────────────────────────────────────────────────────────
+
+export function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem(ADMIN_AUTH_KEY) === "true";
+  });
+
+  if (!isAuthenticated) {
+    return <PasswordGate onAuth={() => setIsAuthenticated(true)} />;
+  }
+
+  return <AdminPanel />;
+}

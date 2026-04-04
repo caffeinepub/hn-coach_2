@@ -46,13 +46,20 @@ export const UserProfile = IDL.Record({
   'targetGoal' : IDL.Text,
   'avatarBlobId' : IDL.Opt(IDL.Text),
 });
+export const MessageType = IDL.Variant({
+  'file' : IDL.Null,
+  'text' : IDL.Null,
+  'image' : IDL.Null,
+});
 export const SenderRole = IDL.Variant({
   'coach' : IDL.Null,
   'user' : IDL.Null,
 });
 export const Message = IDL.Record({
+  'messageType' : MessageType,
   'message' : IDL.Text,
   'timestamp' : IDL.Int,
+  'blobId' : IDL.Opt(IDL.Text),
   'senderRole' : SenderRole,
 });
 
@@ -84,10 +91,12 @@ export const idlService = IDL.Service({
     ),
   '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'adminCancelBooking' : IDL.Func([IDL.Nat], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'bookAppointment' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
   'cancelAllBookingsForUser' : IDL.Func([IDL.Principal], [], []),
   'cancelBooking' : IDL.Func([IDL.Nat], [], []),
+  'getAllBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
   'getAllBookingsByUser' : IDL.Func(
       [IDL.Principal],
       [IDL.Vec(Booking)],
@@ -95,6 +104,7 @@ export const idlService = IDL.Service({
     ),
   'getAllBookingsForDate' : IDL.Func([IDL.Text], [IDL.Vec(Booking)], ['query']),
   'getAllProfiles' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
+  'getAllUsers' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
   'getAvailableTimeSlots' : IDL.Func(
       [IDL.Text],
       [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Bool))],
@@ -117,8 +127,16 @@ export const idlService = IDL.Service({
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveUserProfile' : IDL.Func([UserProfile], [], []),
-  'sendMessageToCoach' : IDL.Func([IDL.Text], [], []),
-  'sendMessageToUser' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+  'sendMessageToCoach' : IDL.Func(
+      [IDL.Text, MessageType, IDL.Opt(IDL.Text)],
+      [],
+      [],
+    ),
+  'sendMessageToUser' : IDL.Func(
+      [IDL.Principal, IDL.Text, MessageType, IDL.Opt(IDL.Text)],
+      [],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -162,10 +180,17 @@ export const idlFactory = ({ IDL }) => {
     'targetGoal' : IDL.Text,
     'avatarBlobId' : IDL.Opt(IDL.Text),
   });
+  const MessageType = IDL.Variant({
+    'file' : IDL.Null,
+    'text' : IDL.Null,
+    'image' : IDL.Null,
+  });
   const SenderRole = IDL.Variant({ 'coach' : IDL.Null, 'user' : IDL.Null });
   const Message = IDL.Record({
+    'messageType' : MessageType,
     'message' : IDL.Text,
     'timestamp' : IDL.Int,
+    'blobId' : IDL.Opt(IDL.Text),
     'senderRole' : SenderRole,
   });
   
@@ -197,10 +222,12 @@ export const idlFactory = ({ IDL }) => {
       ),
     '_caffeineStorageUpdateGatewayPrincipals' : IDL.Func([], [], []),
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'adminCancelBooking' : IDL.Func([IDL.Nat], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'bookAppointment' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], []),
     'cancelAllBookingsForUser' : IDL.Func([IDL.Principal], [], []),
     'cancelBooking' : IDL.Func([IDL.Nat], [], []),
+    'getAllBookings' : IDL.Func([], [IDL.Vec(Booking)], ['query']),
     'getAllBookingsByUser' : IDL.Func(
         [IDL.Principal],
         [IDL.Vec(Booking)],
@@ -212,6 +239,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getAllProfiles' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
+    'getAllUsers' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
     'getAvailableTimeSlots' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Bool))],
@@ -234,8 +262,16 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveUserProfile' : IDL.Func([UserProfile], [], []),
-    'sendMessageToCoach' : IDL.Func([IDL.Text], [], []),
-    'sendMessageToUser' : IDL.Func([IDL.Principal, IDL.Text], [], []),
+    'sendMessageToCoach' : IDL.Func(
+        [IDL.Text, MessageType, IDL.Opt(IDL.Text)],
+        [],
+        [],
+      ),
+    'sendMessageToUser' : IDL.Func(
+        [IDL.Principal, IDL.Text, MessageType, IDL.Opt(IDL.Text)],
+        [],
+        [],
+      ),
   });
 };
 

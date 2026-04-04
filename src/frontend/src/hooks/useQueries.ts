@@ -1,5 +1,7 @@
+import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Booking, Message, UserProfile } from "../backend";
+import type { MessageType } from "../backend";
 import { useActor } from "./useActor";
 
 export function useGetCallerUserProfile() {
@@ -56,9 +58,17 @@ export function useSendMessageToCoach() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (message: string) => {
+    mutationFn: async ({
+      message,
+      messageType,
+      blobId,
+    }: {
+      message: string;
+      messageType: MessageType;
+      blobId: string | null;
+    }) => {
       if (!actor) throw new Error("Actor not available");
-      await actor.sendMessageToCoach(message);
+      await actor.sendMessageToCoach(message, messageType, blobId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["messageHistory"] });
@@ -123,6 +133,104 @@ export function useCancelBooking() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["userBookings"] });
       queryClient.invalidateQueries({ queryKey: ["availableTimeSlots"] });
+    },
+  });
+}
+
+// ─── Admin Hooks ────────────────────────────────────────────────────────────
+
+export function useGetAllUsers() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Principal[]>({
+    queryKey: ["allUsers"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllUsers();
+    },
+    enabled: !!actor && !actorFetching,
+  });
+}
+
+export function useGetUserProfile(principal: Principal | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<UserProfile | null>({
+    queryKey: ["userProfile", principal?.toString()],
+    queryFn: async () => {
+      if (!actor || !principal) return null;
+      return actor.getUserProfile(principal);
+    },
+    enabled: !!actor && !actorFetching && !!principal,
+  });
+}
+
+export function useGetUserMessageHistoryAdmin(user: Principal | null) {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Message[]>({
+    queryKey: ["userMessageHistory", user?.toString()],
+    queryFn: async () => {
+      if (!actor || !user) return [];
+      return actor.getUserMessageHistory(user);
+    },
+    enabled: !!actor && !actorFetching && !!user,
+    refetchInterval: 5000,
+  });
+}
+
+export function useSendMessageToUser() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      user,
+      message,
+      messageType,
+      blobId,
+    }: {
+      user: Principal;
+      message: string;
+      messageType: MessageType;
+      blobId: string | null;
+    }) => {
+      if (!actor) throw new Error("Actor not available");
+      await actor.sendMessageToUser(user, message, messageType, blobId);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["userMessageHistory", variables.user.toString()],
+      });
+    },
+  });
+}
+
+export function useGetAllBookings() {
+  const { actor, isFetching: actorFetching } = useActor();
+
+  return useQuery<Booking[]>({
+    queryKey: ["allBookings"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.getAllBookings();
+    },
+    enabled: !!actor && !actorFetching,
+    refetchInterval: 30000,
+  });
+}
+
+export function useAdminCancelBooking() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bookingId: bigint) => {
+      if (!actor) throw new Error("Actor not available");
+      await actor.adminCancelBooking(bookingId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["allBookings"] });
     },
   });
 }
