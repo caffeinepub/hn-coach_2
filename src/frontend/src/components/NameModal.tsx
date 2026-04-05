@@ -22,7 +22,7 @@ interface NameModalProps {
 
 export function NameModal({ open, onComplete }: NameModalProps) {
   const queryClient = useQueryClient();
-  const { actor, isFetching } = useActor();
+  const { actor } = useActor();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -71,8 +71,7 @@ export function NameModal({ open, onComplete }: NameModalProps) {
     }
   };
 
-  const isConnecting = isFetching && !actor;
-  const buttonDisabled = isSaving || isConnecting;
+  const buttonDisabled = isSaving;
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
@@ -171,11 +170,6 @@ export function NameModal({ open, onComplete }: NameModalProps) {
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Saving...
-              </>
-            ) : isConnecting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Connecting...
               </>
             ) : (
               <>
