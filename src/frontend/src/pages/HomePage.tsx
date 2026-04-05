@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowRight, CalendarCheck, MessageCircle } from "lucide-react";
+import { ArrowRight, CalendarCheck, MessageCircle, Shield } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Footer } from "../components/Footer";
@@ -211,6 +211,31 @@ export function HomePage() {
             </button>
           </motion.div>
         </div>
+
+        {/* Admin Access — subtle secondary button */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="flex justify-center mt-10"
+        >
+          <button
+            type="button"
+            onClick={() => {
+              window.location.href = "/admin";
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all hover:shadow-sm hover:bg-gray-50"
+            style={{
+              color: "#6B7280",
+              borderColor: "#D1D5DB",
+              background: "transparent",
+            }}
+            data-ocid="home.admin.button"
+          >
+            <Shield className="w-4 h-4" />
+            Admin Access
+          </button>
+        </motion.div>
       </main>
 
       <Footer />

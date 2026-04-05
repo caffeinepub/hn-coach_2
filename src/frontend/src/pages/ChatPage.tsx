@@ -11,6 +11,7 @@ import {
   History,
   Loader2,
   MessageCircle,
+  Palette,
   Paperclip,
   Send,
   Sparkles,
@@ -147,6 +148,40 @@ const IMAGE_BONUSES = [
   { label: "Before Image", pts: 250, emoji: "📸" },
   { label: "After Image", pts: 250, emoji: "🏆" },
   { label: "Daily Bonus", pts: 50, emoji: "⭐" },
+];
+
+const REFERRAL_TIERS = [
+  { rank: "1st Referral", pts: 5000, emoji: "🤝" },
+  { rank: "2nd Referral", pts: 6000, emoji: "🤝🤝" },
+  { rank: "3rd Referral", pts: 7000, emoji: "🤝🤝🤝" },
+];
+
+const CHAT_BACKGROUNDS = [
+  {
+    id: "default",
+    label: "Default",
+    bg: "linear-gradient(180deg, #FFFBF5 0%, #FFFFFF 100%)",
+  },
+  {
+    id: "ocean",
+    label: "Ocean",
+    bg: "linear-gradient(180deg, #EFF6FF 0%, #DBEAFE 100%)",
+  },
+  {
+    id: "forest",
+    label: "Forest",
+    bg: "linear-gradient(180deg, #F0FDF4 0%, #DCFCE7 100%)",
+  },
+  {
+    id: "sunset",
+    label: "Sunset",
+    bg: "linear-gradient(180deg, #FFF7ED 0%, #FED7AA 100%)",
+  },
+  {
+    id: "midnight",
+    label: "Midnight",
+    bg: "linear-gradient(180deg, #1E1B4B 0%, #312E81 100%)",
+  },
 ];
 
 function PointsSummaryCard() {
@@ -355,7 +390,7 @@ function BonusPointsGuide() {
             transition={{ duration: 0.25 }}
             style={{ overflow: "hidden" }}
           >
-            <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Streak bonuses */}
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
@@ -442,6 +477,50 @@ function BonusPointsGuide() {
                   ))}
                 </div>
               </div>
+
+              {/* Referral Bonus */}
+              <div>
+                <div className="flex items-center gap-1.5 mb-2">
+                  <span className="text-sm" style={{ color: "#FF6A00" }}>
+                    👥
+                  </span>
+                  <span
+                    className="text-xs font-bold uppercase tracking-wider"
+                    style={{ color: "#FF6A00" }}
+                  >
+                    Referral Bonus
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {REFERRAL_TIERS.map((tier, i) => (
+                    <div
+                      key={tier.rank}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl"
+                      style={{
+                        background: `rgba(255,106,0,${0.04 + i * 0.03})`,
+                        border: `1.5px solid rgba(255,106,0,${0.15 + i * 0.05})`,
+                      }}
+                      data-ocid={`chat.referral_tier.item.${i + 1}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{tier.emoji}</span>
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: "#1A1A2E" }}
+                        >
+                          {tier.rank}
+                        </span>
+                      </div>
+                      <span
+                        className="text-xs font-bold"
+                        style={{ color: "#FF6A00" }}
+                      >
+                        +{tier.pts.toLocaleString()} pts
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -459,6 +538,8 @@ export function ChatPage() {
   const hasName = !!profile?.name?.trim();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
+  const [chatBg, setChatBg] = useState(CHAT_BACKGROUNDS[0].bg);
+  const [showBgPicker, setShowBgPicker] = useState(false);
 
   const { data: messages, isLoading } = useGetMessageHistory();
   const sendMessage = useSendMessageToCoach();
@@ -690,7 +771,7 @@ export function ChatPage() {
             >
               {/* Chat header bar */}
               <div
-                className="flex items-center gap-3 px-5 py-3.5"
+                className="relative flex items-center gap-3 px-5 py-3.5"
                 style={{
                   background:
                     "linear-gradient(135deg, #FF6A00 0%, #FF8C3A 100%)",
@@ -706,10 +787,83 @@ export function ChatPage() {
                     <p className="text-white/80 text-xs">Online</p>
                   </div>
                 </div>
-                <div className="ml-auto flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-white/70" />
-                  <span className="text-white/80 text-xs">8am – 11:59pm</span>
+                <div className="ml-auto flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-white/70" />
+                    <span className="text-white/80 text-xs">8am – 11:59pm</span>
+                  </div>
+                  {/* Background theme picker button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowBgPicker((v) => !v)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors hover:bg-white/20"
+                    style={{ background: "rgba(255,255,255,0.12)" }}
+                    title="Change chat background"
+                    data-ocid="chat.bg_picker.button"
+                  >
+                    <Palette className="w-3.5 h-3.5 text-white" />
+                  </button>
                 </div>
+
+                {/* Background theme picker panel */}
+                {showBgPicker && (
+                  <div
+                    className="absolute top-full right-2 mt-1 z-20 rounded-2xl p-3 shadow-xl"
+                    style={{
+                      background: "#FFFFFF",
+                      border: "1px solid #F0E8DE",
+                      boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+                    }}
+                    data-ocid="chat.bg_picker.panel"
+                  >
+                    <p
+                      className="text-xs font-semibold mb-2 px-1"
+                      style={{ color: "#8B7355" }}
+                    >
+                      Chat Background
+                    </p>
+                    <div className="flex gap-2">
+                      {CHAT_BACKGROUNDS.map((theme) => (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() => {
+                            setChatBg(theme.bg);
+                            setShowBgPicker(false);
+                          }}
+                          className="flex flex-col items-center gap-1 group"
+                          title={theme.label}
+                          data-ocid={`chat.bg_theme.${theme.id}`}
+                        >
+                          <div
+                            className="w-9 h-9 rounded-xl transition-all group-hover:scale-110"
+                            style={{
+                              background: theme.bg,
+                              border:
+                                chatBg === theme.bg
+                                  ? "2.5px solid #FF6A00"
+                                  : "2px solid #E5E7EB",
+                              boxShadow:
+                                chatBg === theme.bg
+                                  ? "0 0 0 2px rgba(255,106,0,0.2)"
+                                  : "none",
+                            }}
+                          />
+                          <span
+                            className="text-xs"
+                            style={{
+                              color:
+                                chatBg === theme.bg ? "#FF6A00" : "#9CA3AF",
+                              fontWeight: chatBg === theme.bg ? 600 : 400,
+                            }}
+                          >
+                            {theme.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Messages area */}
@@ -718,8 +872,7 @@ export function ChatPage() {
                 className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-1"
                 style={{
                   maxHeight: "calc(100vh - 420px)",
-                  background:
-                    "linear-gradient(180deg, #FFFBF5 0%, #FFFFFF 100%)",
+                  background: chatBg,
                 }}
                 data-ocid="chat.panel"
               >

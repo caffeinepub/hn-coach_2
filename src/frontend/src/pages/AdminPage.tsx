@@ -44,22 +44,23 @@ import {
 } from "../backend";
 import type { Booking, Message } from "../backend";
 import type { PointRecord } from "../backend";
+import type { backendInterface } from "../backend";
 import { loadConfig } from "../config";
-import { useActor } from "../hooks/useActor";
+import { useAdminActor } from "../hooks/useAdminActor";
 import {
-  useAdminCancelBooking,
-  useGetAllBookings,
-  useGetAllUsers,
-  useGetCoachUnreadCount,
-  useGetLastReadTimestamp,
-  useGetUserMessageHistoryAdmin,
-  useGetUserPointHistory,
-  useGetUserPoints,
-  useGetUserProfile,
-  useGivePoints,
-  useMarkCoachReadForUser,
-  useSendMessageToUser,
-} from "../hooks/useQueries";
+  useAdminCancelBookingMutation,
+  useAdminGetAllBookings,
+  useAdminGetAllUsers,
+  useAdminGetCoachUnreadCount,
+  useAdminGetLastReadTimestamp,
+  useAdminGetUserMessageHistory,
+  useAdminGetUserPointHistory,
+  useAdminGetUserPoints,
+  useAdminGetUserProfile,
+  useAdminGivePoints,
+  useAdminMarkCoachReadForUser,
+  useAdminSendMessageToUser,
+} from "../hooks/useAdminQueries";
 import { StorageClient } from "../utils/StorageClient";
 import { showPushNotification } from "../utils/notifications";
 
@@ -169,13 +170,15 @@ function UserListItem({
   principal,
   isSelected,
   onClick,
+  actor,
 }: {
   principal: Principal;
   isSelected: boolean;
   onClick: () => void;
+  actor: backendInterface | null;
 }) {
-  const { data: profile } = useGetUserProfile(principal);
-  const { data: unreadCount } = useGetCoachUnreadCount(principal);
+  const { data: profile } = useAdminGetUserProfile(actor, principal);
+  const { data: unreadCount } = useAdminGetCoachUnreadCount(actor, principal);
   const shortId = `${principal.toString().slice(0, 12)}...`;
   const displayName = profile?.name || `User: ${shortId}`;
   const hasUnread = unreadCount !== undefined && unreadCount > BigInt(0);
@@ -236,14 +239,21 @@ function getAdminCategoryLabel(reason: PointReason): string {
   }
 }
 
-function PointsBar({ selectedUser }: { selectedUser: Principal }) {
-  const { actor } = useActor();
-  const { data: totalPoints, isLoading: pointsLoading } =
-    useGetUserPoints(selectedUser);
+function PointsBar({
+  selectedUser,
+  actor,
+}: {
+  selectedUser: Principal;
+  actor: backendInterface | null;
+}) {
+  const { data: totalPoints, isLoading: pointsLoading } = useAdminGetUserPoints(
+    actor,
+    selectedUser,
+  );
   const { data: pointHistory, isLoading: historyLoading } =
-    useGetUserPointHistory(selectedUser);
-  const givePoints = useGivePoints();
-  const sendToUser = useSendMessageToUser();
+    useAdminGetUserPointHistory(actor, selectedUser);
+  const givePoints = useAdminGivePoints(actor);
+  const sendToUser = useAdminSendMessageToUser(actor);
   const [customPoints, setCustomPoints] = useState("");
   const [remark, setRemark] = useState("");
   const [showHistory, setShowHistory] = useState(false);
@@ -607,16 +617,23 @@ function ConversationPanel({
   selectedUser,
   storageClient,
   onBack,
+  actor,
 }: {
   selectedUser: Principal | null;
   storageClient: StorageClient | null;
   onBack?: () => void;
+  actor: backendInterface | null;
 }) {
-  const { data: profile } = useGetUserProfile(selectedUser);
-  const { data: messages, isLoading } =
-    useGetUserMessageHistoryAdmin(selectedUser);
-  const { data: lastReadTimestamp } = useGetLastReadTimestamp(selectedUser);
-  const sendToUser = useSendMessageToUser();
+  const { data: profile } = useAdminGetUserProfile(actor, selectedUser);
+  const { data: messages, isLoading } = useAdminGetUserMessageHistory(
+    actor,
+    selectedUser,
+  );
+  const { data: lastReadTimestamp } = useAdminGetLastReadTimestamp(
+    actor,
+    selectedUser,
+  );
+  const sendToUser = useAdminSendMessageToUser(actor);
   const [replyText, setReplyText] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -808,7 +825,7 @@ function ConversationPanel({
       </div>
 
       {/* Points bar */}
-      <PointsBar selectedUser={selectedUser} />
+      <PointsBar selectedUser={selectedUser} actor={actor} />
 
       {/* Messages area */}
       <div
@@ -1005,9 +1022,9 @@ function ConversationPanel({
   );
 }
 
-function BookingsTab() {
-  const { data: bookings, isLoading } = useGetAllBookings();
-  const cancelBooking = useAdminCancelBooking();
+function BookingsTab({ actor }: { actor: backendInterface | null }) {
+  const { data: bookings, isLoading } = useAdminGetAllBookings(actor);
+  const cancelBooking = useAdminCancelBookingMutation(actor);
 
   const sortedBookings = useMemo(() => {
     if (!bookings) return [];
@@ -1095,7 +1112,7 @@ function BookingsTab() {
                   data-ocid={`admin.bookings.row.${idx + 1}`}
                 >
                   <TableCell>
-                    <BookingUserCell user={booking.user} />
+                    <BookingUserCell user={booking.user} actor={actor} />
                   </TableCell>
                   <TableCell className="text-white">{booking.date}</TableCell>
                   <TableCell className="text-white">
@@ -1165,7 +1182,7 @@ function BookingsTab() {
             data-ocid={`admin.bookings.item.${idx + 1}`}
           >
             <div className="flex items-start justify-between gap-3 mb-3">
-              <BookingUserCell user={booking.user} />
+              <BookingUserCell user={booking.user} actor={actor} />
               <Badge
                 className="font-semibold text-xs flex-shrink-0"
                 style={{
@@ -1233,8 +1250,14 @@ function BookingsTab() {
   );
 }
 
-function BookingUserCell({ user }: { user: Principal }) {
-  const { data: profile } = useGetUserProfile(user);
+function BookingUserCell({
+  user,
+  actor,
+}: {
+  user: Principal;
+  actor: backendInterface | null;
+}) {
+  const { data: profile } = useAdminGetUserProfile(actor, user);
   return (
     <div>
       <p className="text-white text-sm font-medium">
@@ -1249,8 +1272,10 @@ function BookingUserCell({ user }: { user: Principal }) {
 
 // Polls unread counts for ALL users and fires browser notifications for new messages
 // This runs regardless of which conversation is open
-function useAdminNotificationWatcher(users: Principal[] | undefined) {
-  const { actor } = useActor();
+function useAdminNotificationWatcher(
+  users: Principal[] | undefined,
+  actor: backendInterface | null,
+) {
   const prevUnreadRef = useRef<Record<string, number>>({});
 
   const checkUnreads = useCallback(async () => {
@@ -1312,12 +1337,16 @@ function useAdminNotificationWatcher(users: Principal[] | undefined) {
 
 function MessagesTab({
   storageClient,
-}: { storageClient: StorageClient | null }) {
-  const { data: users, isLoading: usersLoading } = useGetAllUsers();
+  actor,
+}: {
+  storageClient: StorageClient | null;
+  actor: backendInterface | null;
+}) {
+  const { data: users, isLoading: usersLoading } = useAdminGetAllUsers(actor);
   const [selectedUser, setSelectedUser] = useState<Principal | null>(null);
-  const markCoachRead = useMarkCoachReadForUser();
+  const markCoachRead = useAdminMarkCoachReadForUser(actor);
   // Global notification watcher - fires for any user, even when not in their conversation
-  useAdminNotificationWatcher(users);
+  useAdminNotificationWatcher(users, actor);
 
   // Continuously mark messages as read while a conversation is open
   // This ensures new messages that arrive while coach is viewing also get cleared
@@ -1392,6 +1421,7 @@ function MessagesTab({
                     principal={u}
                     isSelected={selectedUser?.toString() === u.toString()}
                     onClick={() => handleSelectUser(u)}
+                    actor={actor}
                   />
                 ))
               )}
@@ -1406,6 +1436,7 @@ function MessagesTab({
             selectedUser={selectedUser}
             storageClient={storageClient}
             onBack={() => setSelectedUser(null)}
+            actor={actor}
           />
         </div>
       </div>
@@ -1565,13 +1596,13 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
 }
 
 function AdminPanel() {
-  const { isFetching } = useActor();
+  const { actor } = useAdminActor();
   const [storageClient, setStorageClient] = useState<StorageClient | null>(
     null,
   );
 
+  // Initialize storage client once on mount — no blocking on actor
   useEffect(() => {
-    if (isFetching) return;
     loadConfig().then((config) => {
       import("@icp-sdk/core/agent").then(({ HttpAgent }) => {
         const agent = new HttpAgent({ host: config.backend_host });
@@ -1588,32 +1619,7 @@ function AdminPanel() {
         setStorageClient(sc);
       });
     });
-  }, [isFetching]);
-
-  if (isFetching) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "#0B2232" }}
-        data-ocid="admin.loading_state"
-      >
-        <div className="flex flex-col items-center gap-4">
-          <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: "rgba(255,106,0,0.15)" }}
-          >
-            <Loader2
-              className="w-6 h-6 animate-spin"
-              style={{ color: "#FF6A00" }}
-            />
-          </div>
-          <p className="text-sm font-medium" style={{ color: "#A8B6C3" }}>
-            Loading admin panel...
-          </p>
-        </div>
-      </div>
-    );
-  }
+  }, []);
 
   return (
     <div
@@ -1709,11 +1715,11 @@ function AdminPanel() {
             </TabsList>
 
             <TabsContent value="messages">
-              <MessagesTab storageClient={storageClient} />
+              <MessagesTab storageClient={storageClient} actor={actor} />
             </TabsContent>
 
             <TabsContent value="bookings">
-              <BookingsTab />
+              <BookingsTab actor={actor} />
             </TabsContent>
           </Tabs>
         </motion.div>

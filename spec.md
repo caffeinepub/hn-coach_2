@@ -1,37 +1,26 @@
 # HN Coach
 
 ## Current State
-App has points history collapsible on ChatPage and AdminPage using ScrollArea with max-h-48/max-h-40, but no overflow-hidden on parent containers so content spills outside the card border. Browser push notifications use `new Notification()` directly which Chrome silently ignores without a Service Worker. No PWA manifest or service worker exists.
+Admin panel at `/admin` is password-protected and shows chat messages, bookings, and points management. After login via Internet Identity was made optional (homepage loads directly without login), the admin panel started showing empty data. All backend functions used by admin (`getAllUsers`, `getAllBookings`, `getUserMessageHistory`, `givePoints`, etc.) are public with no auth checks -- they work with anonymous actors.
+
+The root cause: `useActor` creates an anonymous actor when there's no identity, but admin panel queries use `enabled: !!actor && !actorFetching`. The `actorFetching` flag can remain true during certain render cycles, blocking all queries from ever executing. Additionally, the admin panel itself uses `useActor` which triggers an Internet Identity re-initialization even though the admin panel doesn't need user authentication.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `public/sw.js` -- Service worker that handles notification display via `showNotification()` and message-based triggers from main thread
-- `public/manifest.json` -- PWA manifest with app name, icons, theme color for Chrome install prompt
-- PWA install prompt banner/button in NavBar (or login page) for Chrome users
-- Service worker registration in main.tsx
-- Notification utility that uses service worker's `showNotification()` instead of `new Notification()`
+- A dedicated `useAnonymousActor` hook for the admin panel that creates an anonymous actor directly without depending on `useInternetIdentity` at all
+- This hook should use a simple `useMemo` or ref-based approach with no authentication dependencies
 
 ### Modify
-- `index.html` -- Add `<link rel="manifest">`, theme-color meta, apple-mobile-web-app meta tags
-- `ChatPage.tsx` -- Fix points history overflow: add `overflow-hidden` to parent div wrapping ScrollArea; make scrollbar always visible with custom CSS
-- `AdminPage.tsx` -- Same overflow fix for points history panel
-- `ChatPage.tsx` notification code -- Replace `new Notification()` with service worker `showNotification()` via registered SW
-- `AdminPage.tsx` notification code -- Same service worker notification fix
-- `main.tsx` -- Register service worker on app init
-- `NavBar.tsx` -- Add PWA install prompt button that appears when Chrome detects the app is installable
+- All admin-specific queries in `useQueries.ts` (`useGetAllUsers`, `useGetAllBookings`, `useGetUserMessageHistoryAdmin`, `useGetUserProfile`, `useGetUserPoints`, `useGetUserPointHistory`, `useGetCoachUnreadCount`, `useGetLastReadTimestamp`, `useMarkCoachReadForUser`, `useSendMessageToUser`, `useGivePoints`, `useAdminCancelBooking`) should accept an optional `actor` param OR the `AdminPage.tsx` should pass actors directly to avoid coupling to `useInternetIdentity`
+- `AdminPage.tsx`: Replace all `useActor()` calls with a direct anonymous actor approach; the PointsBar, ConversationPanel, MessagesTab, BookingsTab, and UserListItem components all currently call hooks that use `useActor` internally. These should all work with an anonymous actor created fresh on admin page mount.
 
 ### Remove
-- Nothing
+- Nothing -- all existing features stay intact
 
 ## Implementation Plan
-1. Create `sw.js` and `manifest.json` in public/ (done)
-2. Update `index.html` with manifest link and meta tags (done)
-3. Update `main.tsx` to register service worker
-4. Create notification utility function using SW showNotification
-5. Fix ChatPage points history overflow with overflow-hidden + visible scrollbar
-6. Fix AdminPage points history overflow with overflow-hidden + visible scrollbar  
-7. Update ChatPage notification code to use SW-based notifications
-8. Update AdminPage notification code to use SW-based notifications
-9. Add PWA install prompt to NavBar
-10. Validate and deploy
+1. Create `src/frontend/src/hooks/useAdminActor.ts` -- a hook that creates an anonymous actor ONCE on mount using a ref, without any Internet Identity dependency. Returns `{ actor, isReady }` where isReady becomes true as soon as the actor is created (within milliseconds).
+2. Create admin-specific query hooks in `useQueries.ts` OR pass the actor directly to components. The simplest approach: add a new `useAdminActor` hook and update each admin query hook to accept an explicit actor parameter, bypassing `useActor` entirely.
+3. In `AdminPage.tsx`, call `useAdminActor()` once at the top of `AdminPanel` and pass the actor down via props to `MessagesTab`, `BookingsTab`, `PointsBar`, `ConversationPanel`, `UserListItem`.
+4. Create admin-specific query functions (not hooks) that take an actor directly, or update the existing admin hooks to accept an actor param. This avoids any dependency on `useInternetIdentity`.
+5. Validate the build passes.
