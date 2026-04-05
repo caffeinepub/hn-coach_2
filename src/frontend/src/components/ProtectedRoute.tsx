@@ -13,29 +13,12 @@ export function isProfileComplete(
   profile:
     | {
         name?: string;
-        age?: bigint | number;
-        whatsAppNumber?: string;
-        email?: string;
-        weight?: string;
-        height?: string;
-        targetGoal?: string;
-        avatarBlobId?: string;
       }
     | null
     | undefined,
 ): boolean {
   if (!profile) return false;
-  return (
-    !!profile.name?.trim() &&
-    !!profile.age &&
-    Number(profile.age) > 0 &&
-    !!profile.whatsAppNumber?.trim() &&
-    !!profile.email?.trim() &&
-    !!profile.weight?.trim() &&
-    !!profile.height?.trim() &&
-    !!profile.targetGoal?.trim() &&
-    !!profile.avatarBlobId?.trim()
-  );
+  return !!profile.name?.trim();
 }
 
 export function ProtectedRoute({

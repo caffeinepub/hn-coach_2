@@ -64,12 +64,8 @@ export function NavBar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/profile" })}
-              className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-              data-ocid="nav.profile.link"
-            >
+            {/* Avatar — display only, no profile link */}
+            <div className="flex items-center gap-2">
               <Avatar
                 className="w-8 h-8 border-2"
                 style={{ borderColor: "#FF6A00" }}
@@ -95,7 +91,7 @@ export function NavBar() {
                   {profile.name}
                 </span>
               )}
-            </button>
+            </div>
 
             <Button
               variant="outline"
