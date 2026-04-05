@@ -19,38 +19,38 @@
 @layer base {
   :root {
     --radius: 0.75rem;
-    /* HN Coach — lighter navy theme */
-    --background: 0.2 0.03 240;
-    --foreground: 1 0 0;
-    --card: 0.24 0.038 230;
-    --card-foreground: 1 0 0;
-    --popover: 0.24 0.038 230;
-    --popover-foreground: 1 0 0;
+    /* HN Coach — bright warm light theme */
+    --background: 0.99 0.01 65;
+    --foreground: 0.18 0.04 45;
+    --card: 1.0 0 0;
+    --card-foreground: 0.18 0.04 45;
+    --popover: 1.0 0 0;
+    --popover-foreground: 0.18 0.04 45;
     --primary: 0.68 0.21 47;
-    --primary-foreground: 1 0 0;
-    --secondary: 0.28 0.042 225;
-    --secondary-foreground: 1 0 0;
-    --muted: 0.28 0.042 225;
-    --muted-foreground: 0.72 0.04 220;
+    --primary-foreground: 1.0 0 0;
+    --secondary: 0.96 0.018 60;
+    --secondary-foreground: 0.3 0.05 45;
+    --muted: 0.95 0.015 58;
+    --muted-foreground: 0.55 0.06 50;
     --accent: 0.68 0.21 47;
-    --accent-foreground: 1 0 0;
+    --accent-foreground: 1.0 0 0;
     --destructive: 0.58 0.22 25;
-    --destructive-foreground: 1 0 0;
-    --border: 0.3 0.042 222;
-    --input: 0.3 0.042 222;
+    --destructive-foreground: 1.0 0 0;
+    --border: 0.88 0.025 58;
+    --input: 0.94 0.018 58;
     --ring: 0.68 0.21 47;
     --chart-1: 0.68 0.21 47;
     --chart-2: 0.6 0.12 185;
     --chart-3: 0.4 0.07 227;
     --chart-4: 0.83 0.19 84;
     --chart-5: 0.77 0.19 70;
-    --sidebar: 0.22 0.036 235;
-    --sidebar-foreground: 1 0 0;
+    --sidebar: 0.97 0.012 60;
+    --sidebar-foreground: 0.18 0.04 45;
     --sidebar-primary: 0.68 0.21 47;
-    --sidebar-primary-foreground: 1 0 0;
-    --sidebar-accent: 0.28 0.042 225;
-    --sidebar-accent-foreground: 1 0 0;
-    --sidebar-border: 0.3 0.042 222;
+    --sidebar-primary-foreground: 1.0 0 0;
+    --sidebar-accent: 0.95 0.015 58;
+    --sidebar-accent-foreground: 0.18 0.04 45;
+    --sidebar-border: 0.88 0.025 58;
     --sidebar-ring: 0.68 0.21 47;
   }
 
@@ -59,16 +59,16 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
     @apply bg-background text-foreground font-body;
     background: linear-gradient(
-      135deg,
-      oklch(0.19 0.038 245) 0%,
-      oklch(0.22 0.042 232) 50%,
-      oklch(0.2 0.036 238) 100%
+      145deg,
+      oklch(0.99 0.012 65) 0%,
+      oklch(1.0 0.005 55) 40%,
+      oklch(0.985 0.018 68) 100%
     );
     min-height: 100vh;
   }
@@ -81,23 +81,21 @@
   .font-display {
     font-family: "Figtree", system-ui, sans-serif;
   }
-  .bg-navy-darkest {
-    background-color: #0d2235;
-  }
-  .bg-navy-dark {
-    background-color: #142e42;
+  /* Light theme utility classes */
+  .bg-page {
+    background-color: #fffbf5;
   }
   .bg-card-surface {
-    background-color: #1a3a50;
+    background-color: #ffffff;
   }
   .bg-card-inner {
-    background-color: #22495f;
+    background-color: #fbf7f4;
   }
-  .border-navy {
-    border-color: #274758;
+  .border-warm {
+    border-color: #ede4d9;
   }
-  .text-muted-blue {
-    color: #b0bfcc;
+  .text-warm-muted {
+    color: #8b7355;
   }
   .bg-orange {
     background-color: #ff6a00;
@@ -110,5 +108,16 @@
   }
   .border-orange {
     border-color: #ff6a00;
+  }
+  /* Legacy dark class aliases — keep for hnc- prefixed classes used in components */
+  .border-hnc-border {
+    border-color: #ede4d9;
+  }
+  .text-hnc-muted {
+    color: #a89078;
+  }
+  .shadow-card {
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06), 0 0 0 1px
+      rgba(255, 150, 0, 0.04);
   }
 }

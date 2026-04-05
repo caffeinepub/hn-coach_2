@@ -69,7 +69,7 @@ function FileMessage({
       target="_blank"
       rel="noopener noreferrer"
       className="flex items-center gap-2 px-3 py-2 rounded-lg hover:opacity-80 transition-opacity"
-      style={{ background: "rgba(255,106,0,0.15)", color: "#FF6A00" }}
+      style={{ background: "rgba(255,106,0,0.12)", color: "#FF6A00" }}
     >
       <FileText className="w-4 h-4 flex-shrink-0" />
       <span className="text-sm truncate max-w-[200px]">
@@ -106,7 +106,7 @@ function ImageMessage({
       src={url}
       alt="Shared file"
       className="rounded-lg max-w-full max-h-64 object-cover"
-      style={{ border: "1px solid #203B4D" }}
+      style={{ border: "1px solid #F0E8DE" }}
     />
   );
 }
@@ -147,8 +147,8 @@ function TodaysPointsBadge({ history }: { history: PointRecord[] }) {
       transition={{ duration: 0.3 }}
       className="flex items-center gap-2 px-3 py-1.5 rounded-full flex-shrink-0"
       style={{
-        background: "rgba(255,106,0,0.18)",
-        border: "1.5px solid rgba(255,106,0,0.45)",
+        background: "rgba(255,106,0,0.12)",
+        border: "1.5px solid rgba(255,106,0,0.35)",
       }}
       data-ocid="chat.today_points.card"
     >
@@ -179,8 +179,9 @@ function PointsSummaryCard() {
       transition={{ duration: 0.35 }}
       className="rounded-xl px-4 py-3 mb-3"
       style={{
-        background: "#112A3A",
-        border: "1px solid #203B4D",
+        background: "#FFFFFF",
+        border: "1px solid #F0E8DE",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
       }}
       data-ocid="chat.points.card"
     >
@@ -190,7 +191,7 @@ function PointsSummaryCard() {
             className="w-4 h-4 animate-spin"
             style={{ color: "#FF6A00" }}
           />
-          <span className="text-xs" style={{ color: "#A8B6C3" }}>
+          <span className="text-xs" style={{ color: "#8B7355" }}>
             Loading points...
           </span>
         </div>
@@ -202,7 +203,10 @@ function PointsSummaryCard() {
               className="w-4 h-4 flex-shrink-0"
               style={{ color: "#FF6A00" }}
             />
-            <span className="text-sm font-semibold text-white">
+            <span
+              className="text-sm font-semibold"
+              style={{ color: "#1A1A2E" }}
+            >
               Total Points:
             </span>
             <span className="text-base font-bold" style={{ color: "#FF6A00" }}>
@@ -222,22 +226,22 @@ function PointsSummaryCard() {
                 className="flex items-center gap-1.5 mb-2 w-full text-left hover:opacity-80 transition-opacity"
                 data-ocid="chat.points_history.toggle"
               >
-                <History className="w-3.5 h-3.5" style={{ color: "#A8B6C3" }} />
+                <History className="w-3.5 h-3.5" style={{ color: "#8B7355" }} />
                 <span
                   className="text-xs font-semibold uppercase tracking-wider flex-1"
-                  style={{ color: "#A8B6C3" }}
+                  style={{ color: "#8B7355" }}
                 >
                   Points History
                 </span>
                 {showHistory ? (
                   <ChevronUp
                     className="w-3.5 h-3.5"
-                    style={{ color: "#A8B6C3" }}
+                    style={{ color: "#8B7355" }}
                   />
                 ) : (
                   <ChevronDown
                     className="w-3.5 h-3.5"
-                    style={{ color: "#A8B6C3" }}
+                    style={{ color: "#8B7355" }}
                   />
                 )}
               </button>
@@ -270,15 +274,15 @@ function PointsSummaryCard() {
                                 <span
                                   className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
                                   style={{
-                                    background: "rgba(255,106,0,0.15)",
-                                    color: "#FFA560",
+                                    background: "rgba(255,106,0,0.12)",
+                                    color: "#FF6A00",
                                   }}
                                 >
                                   {category}
                                 </span>
                                 <span
                                   className="text-xs"
-                                  style={{ color: "#A8B6C3" }}
+                                  style={{ color: "#8B7355" }}
                                 >
                                   {dateStr}
                                 </span>
@@ -286,7 +290,7 @@ function PointsSummaryCard() {
                               {record.remark && (
                                 <p
                                   className="text-xs truncate"
-                                  style={{ color: "#8BA3B5" }}
+                                  style={{ color: "#A89078" }}
                                 >
                                   {record.remark}
                                 </p>
@@ -309,7 +313,7 @@ function PointsSummaryCard() {
           )}
 
           {sortedHistory.length === 0 && !isLoading && (
-            <p className="text-xs" style={{ color: "#A8B6C3" }}>
+            <p className="text-xs" style={{ color: "#8B7355" }}>
               No points yet — keep up your streak and share progress images!
             </p>
           )}
@@ -333,7 +337,7 @@ const IMAGE_BONUSES = [
   { label: "Weekly Measurements", pts: 100 },
 ];
 
-const IMAGE_BONUS_EMOJIS = ["⚖️", "👟", "🍽️", "📏"];
+const IMAGE_BONUS_EMOJIS = ["⚖️", "💟", "🍽️", "📏"];
 
 function BonusPointsGuide() {
   const [open, setOpen] = useState(true);
@@ -344,21 +348,25 @@ function BonusPointsGuide() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.08 }}
       className="rounded-xl mb-5 overflow-hidden"
-      style={{ background: "#112A3A", border: "1px solid #203B4D" }}
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid #F0E8DE",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      }}
       data-ocid="chat.bonus_guide.card"
     >
       {/* Header / toggle */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-orange-50 transition-colors"
         data-ocid="chat.bonus_guide.toggle"
       >
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4" style={{ color: "#FF6A00" }} />
           <span
             className="text-xs font-semibold tracking-wide"
-            style={{ color: "#A8B6C3" }}
+            style={{ color: "#1A1A2E" }}
           >
             🎯 How to Earn Bonus Points
           </span>
@@ -367,7 +375,7 @@ function BonusPointsGuide() {
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <ChevronDown className="w-4 h-4" style={{ color: "#A8B6C3" }} />
+          <ChevronDown className="w-4 h-4" style={{ color: "#8B7355" }} />
         </motion.div>
       </button>
 
@@ -402,8 +410,8 @@ function BonusPointsGuide() {
                         key={tier.days}
                         className="flex items-center justify-between px-3 py-1.5 rounded-lg"
                         style={{
-                          background: `rgba(255,106,0,${intensity * 0.12})`,
-                          border: `1px solid rgba(255,106,0,${intensity * 0.3})`,
+                          background: `rgba(255,106,0,${intensity * 0.1})`,
+                          border: `1px solid rgba(255,106,0,${intensity * 0.25})`,
                         }}
                         data-ocid={`chat.streak_tier.item.${i + 1}`}
                       >
@@ -417,14 +425,17 @@ function BonusPointsGuide() {
                                   ? "🔥🔥🔥"
                                   : "🔥🔥🔥🔥"}
                           </span>
-                          <span className="text-xs font-medium text-white">
+                          <span
+                            className="text-xs font-medium"
+                            style={{ color: "#1A1A2E" }}
+                          >
                             {tier.days} days
                           </span>
                         </div>
                         <span
                           className="text-xs font-bold tabular-nums"
                           style={{
-                            color: `rgba(255,${130 + i * 20},${0 + i * 10},1)`,
+                            color: `rgba(255,${90 + i * 25},0,1)`,
                           }}
                         >
                           +{tier.pts.toLocaleString()} pts
@@ -455,20 +466,23 @@ function BonusPointsGuide() {
                       key={bonus.label}
                       className="flex items-center justify-between px-3 py-1.5 rounded-lg"
                       style={{
-                        background: "rgba(255,106,0,0.07)",
-                        border: "1px solid rgba(255,106,0,0.18)",
+                        background: "rgba(255,106,0,0.06)",
+                        border: "1px solid rgba(255,106,0,0.15)",
                       }}
                       data-ocid={`chat.image_bonus.item.${i + 1}`}
                     >
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm">{IMAGE_BONUS_EMOJIS[i]}</span>
-                        <span className="text-xs font-medium text-white">
+                        <span
+                          className="text-xs font-medium"
+                          style={{ color: "#1A1A2E" }}
+                        >
                           {bonus.label}
                         </span>
                       </div>
                       <span
                         className="text-xs font-bold tabular-nums"
-                        style={{ color: "#FFA560" }}
+                        style={{ color: "#FF6A00" }}
                       >
                         +{bonus.pts} pts
                       </span>
@@ -479,7 +493,7 @@ function BonusPointsGuide() {
                 {/* Motivational note */}
                 <p
                   className="text-xs mt-2 leading-relaxed"
-                  style={{ color: "#A8B6C3" }}
+                  style={{ color: "#8B7355" }}
                 >
                   Share your progress images with your coach to earn bonus
                   points and track your transformation! 💪
@@ -533,13 +547,13 @@ function NotificationPermissionBanner() {
       transition={{ duration: 0.3 }}
       className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4"
       style={{
-        background: "rgba(7,24,36,0.9)",
-        border: "1px solid rgba(255,106,0,0.4)",
+        background: "rgba(255,106,0,0.07)",
+        border: "1px solid rgba(255,106,0,0.3)",
       }}
       data-ocid="chat.notification_banner"
     >
       <Bell className="w-4 h-4 flex-shrink-0" style={{ color: "#FF6A00" }} />
-      <p className="text-sm text-white flex-1">
+      <p className="text-sm flex-1" style={{ color: "#1A1A2E" }}>
         Enable notifications to be alerted when your coach replies
       </p>
       <Button
@@ -558,7 +572,7 @@ function NotificationPermissionBanner() {
         aria-label="Dismiss"
         data-ocid="chat.notification_banner.close_button"
       >
-        <X className="w-4 h-4" style={{ color: "#A8B6C3" }} />
+        <X className="w-4 h-4" style={{ color: "#8B7355" }} />
       </button>
     </motion.div>
   );
@@ -743,7 +757,7 @@ export function ChatPage() {
     <ProtectedRoute>
       <div
         className="min-h-screen flex flex-col"
-        style={{ background: "#0B2232" }}
+        style={{ background: "#FFFBF5" }}
       >
         <NavBar />
 
@@ -758,7 +772,7 @@ export function ChatPage() {
             <div className="flex items-center gap-3 mb-5">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(255,106,0,0.15)" }}
+                style={{ background: "rgba(255,106,0,0.1)" }}
               >
                 <MessageCircle
                   className="w-5 h-5"
@@ -766,16 +780,19 @@ export function ChatPage() {
                 />
               </div>
               <div>
-                <h1 className="text-xl font-display font-bold text-white">
+                <h1
+                  className="text-xl font-display font-bold"
+                  style={{ color: "#1A1A2E" }}
+                >
                   Chat with your Coach
                 </h1>
-                <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                <p className="text-sm" style={{ color: "#8B7355" }}>
                   Your messages are private and secure
                 </p>
               </div>
               <div className="ml-auto flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-green-400" />
-                <span className="text-xs" style={{ color: "#A8B6C3" }}>
+                <span className="text-xs" style={{ color: "#8B7355" }}>
                   Coach online
                 </span>
               </div>
@@ -794,8 +811,13 @@ export function ChatPage() {
 
             {/* Chat container */}
             <div
-              className="flex-1 flex flex-col rounded-2xl border border-hnc-border shadow-card overflow-hidden"
-              style={{ background: "#112A3A", minHeight: "500px" }}
+              className="flex-1 flex flex-col rounded-2xl border overflow-hidden"
+              style={{
+                background: "#FFFFFF",
+                borderColor: "#F0E8DE",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+                minHeight: "500px",
+              }}
             >
               {/* Messages area */}
               <div
@@ -818,11 +840,13 @@ export function ChatPage() {
                     data-ocid="chat.empty_state"
                   >
                     <MessageCircle
-                      className="w-12 h-12 mb-3 opacity-30"
+                      className="w-12 h-12 mb-3 opacity-20"
                       style={{ color: "#FF6A00" }}
                     />
-                    <p className="font-medium text-white">No messages yet</p>
-                    <p className="text-sm mt-1" style={{ color: "#A8B6C3" }}>
+                    <p className="font-medium" style={{ color: "#1A1A2E" }}>
+                      No messages yet
+                    </p>
+                    <p className="text-sm mt-1" style={{ color: "#8B7355" }}>
                       Say hello to your coach!
                     </p>
                   </div>
@@ -831,14 +855,20 @@ export function ChatPage() {
                     {groupedMessages.map((group) => (
                       <div key={group.date}>
                         <div className="flex items-center gap-3 my-4">
-                          <div className="flex-1 border-t border-hnc-border" />
+                          <div
+                            className="flex-1 border-t"
+                            style={{ borderColor: "#F0E8DE" }}
+                          />
                           <span
                             className="text-xs px-2"
-                            style={{ color: "#A8B6C3" }}
+                            style={{ color: "#A89078" }}
                           >
                             {group.date}
                           </span>
-                          <div className="flex-1 border-t border-hnc-border" />
+                          <div
+                            className="flex-1 border-t"
+                            style={{ borderColor: "#F0E8DE" }}
+                          />
                         </div>
                         {group.messages?.map((msg, i) => {
                           const isUser = msg.senderRole === SenderRole.user;
@@ -866,9 +896,13 @@ export function ChatPage() {
                                   </span>
                                 )}
                                 <div
-                                  className="px-4 py-3 rounded-2xl text-sm text-white leading-relaxed"
+                                  className="px-4 py-3 rounded-2xl text-sm leading-relaxed"
                                   style={{
-                                    background: isUser ? "#FF6A00" : "#1A3A4F",
+                                    background: isUser ? "#FF6A00" : "#F8F3EE",
+                                    color: isUser ? "#FFFFFF" : "#1A1A2E",
+                                    border: isUser
+                                      ? "none"
+                                      : "1px solid #F0E8DE",
                                     borderBottomRightRadius: isUser
                                       ? "4px"
                                       : undefined,
@@ -896,7 +930,7 @@ export function ChatPage() {
                                 </div>
                                 <span
                                   className="text-xs mt-1 px-1"
-                                  style={{ color: "#A8B6C3" }}
+                                  style={{ color: "#A89078" }}
                                 >
                                   {formatTime(msg.timestamp)}
                                 </span>
@@ -914,17 +948,17 @@ export function ChatPage() {
               <div
                 className="mx-3 mb-2 mt-1 flex items-center gap-2 px-3 py-2 rounded-xl"
                 style={{
-                  background: "rgba(255, 106, 0, 0.08)",
-                  border: "1px solid rgba(255, 106, 0, 0.22)",
+                  background: "rgba(255, 106, 0, 0.07)",
+                  border: "1px solid rgba(255, 106, 0, 0.2)",
                 }}
               >
                 <Clock
                   className="w-3.5 h-3.5 flex-shrink-0"
                   style={{ color: "#FF8C38" }}
                 />
-                <p className="text-xs font-medium" style={{ color: "#FF8C38" }}>
+                <p className="text-xs font-medium" style={{ color: "#FF6A00" }}>
                   We will respond shortly{" "}
-                  <span style={{ color: "#FFA560" }}>
+                  <span style={{ color: "#c45200" }}>
                     (Morning 8am to 11:59pm)
                   </span>
                 </p>
@@ -932,8 +966,8 @@ export function ChatPage() {
 
               {/* Input area */}
               <div
-                className="border-t border-hnc-border p-4"
-                style={{ background: "#0B2232" }}
+                className="border-t p-4"
+                style={{ background: "#FFFBF5", borderColor: "#F0E8DE" }}
               >
                 <div className="flex items-end gap-2">
                   {/* Hidden file input */}
@@ -952,9 +986,9 @@ export function ChatPage() {
                     disabled={isUploading || !storageClient}
                     className="w-11 h-11 p-0 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: "#1A3A4F",
-                      border: "1px solid #203B4D",
-                      color: isUploading ? "#FF6A00" : "#A8B6C3",
+                      background: "#F0E8DE",
+                      border: "1px solid #EDE4D9",
+                      color: isUploading ? "#FF6A00" : "#8B7355",
                     }}
                     title="Attach image or PDF"
                   >
@@ -971,15 +1005,22 @@ export function ChatPage() {
                     onKeyDown={handleKeyDown}
                     placeholder="Type your message... (Enter to send)"
                     rows={1}
-                    className="flex-1 rounded-xl px-4 py-3 text-sm text-white resize-none outline-none border border-hnc-border focus:border-orange-400 transition-colors min-h-[44px] max-h-32 overflow-y-auto"
-                    style={{ background: "#1A3A4F", color: "white" }}
+                    className="flex-1 rounded-xl px-4 py-3 text-sm resize-none outline-none border focus:border-orange-400 transition-colors min-h-[44px] max-h-32 overflow-y-auto"
+                    style={{
+                      background: "#FFFFFF",
+                      borderColor: "#EDE4D9",
+                      color: "#1A1A2E",
+                    }}
                     data-ocid="chat.input"
                   />
                   <Button
                     onClick={() => handleSend()}
                     disabled={!input.trim() || sendMessage.isPending}
                     className="w-11 h-11 p-0 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
-                    style={{ background: "#FF6A00" }}
+                    style={{
+                      background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                      boxShadow: "0 4px 12px rgba(255,106,0,0.3)",
+                    }}
                     data-ocid="chat.submit_button"
                   >
                     {sendMessage.isPending ? (
@@ -989,7 +1030,7 @@ export function ChatPage() {
                     )}
                   </Button>
                 </div>
-                <p className="text-xs mt-2" style={{ color: "#A8B6C3" }}>
+                <p className="text-xs mt-2" style={{ color: "#A89078" }}>
                   Press Enter to send &bull; Shift+Enter for new line &bull;
                   Attach images or PDFs with the paperclip
                 </p>

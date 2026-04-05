@@ -80,7 +80,7 @@ export function BookPage() {
     <ProtectedRoute>
       <div
         className="min-h-screen flex flex-col"
-        style={{ background: "#0B2232" }}
+        style={{ background: "#FFFBF5" }}
       >
         <NavBar />
 
@@ -94,7 +94,7 @@ export function BookPage() {
             <div className="flex items-center gap-3 mb-8">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(255,106,0,0.15)" }}
+                style={{ background: "rgba(255,106,0,0.1)" }}
               >
                 <CalendarCheck
                   className="w-5 h-5"
@@ -102,10 +102,13 @@ export function BookPage() {
                 />
               </div>
               <div>
-                <h1 className="text-xl font-display font-bold text-white">
+                <h1
+                  className="text-xl font-display font-bold"
+                  style={{ color: "#1A1A2E" }}
+                >
                   Book an Appointment
                 </h1>
-                <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                <p className="text-sm" style={{ color: "#8B7355" }}>
                   Schedule a 40-minute coaching session · Available 6am – 10pm
                 </p>
               </div>
@@ -114,12 +117,16 @@ export function BookPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {/* Calendar */}
               <div
-                className="rounded-2xl p-6 border border-hnc-border shadow-card"
-                style={{ background: "#112A3A" }}
+                className="rounded-2xl p-6 border"
+                style={{
+                  background: "#FFFFFF",
+                  borderColor: "#F0E8DE",
+                  boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+                }}
               >
                 <h2
                   className="text-sm font-semibold uppercase tracking-wide mb-5"
-                  style={{ color: "#A8B6C3" }}
+                  style={{ color: "#8B7355" }}
                 >
                   Select a Date
                 </h2>
@@ -133,27 +140,30 @@ export function BookPage() {
                     months: "flex flex-col",
                     month: "space-y-4",
                     caption: "flex justify-center pt-1 relative items-center",
-                    caption_label: "text-sm font-semibold text-white",
+                    caption_label: "text-sm font-semibold",
                     nav: "space-x-1 flex items-center",
                     nav_button:
-                      "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-white",
+                      "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
                     nav_button_previous: "absolute left-1",
                     nav_button_next: "absolute right-1",
                     table: "w-full border-collapse space-y-1",
                     head_row: "flex",
                     head_cell:
-                      "text-hnc-muted rounded-md w-9 font-normal text-xs flex-1 text-center",
+                      "rounded-md w-9 font-normal text-xs flex-1 text-center",
                     row: "flex w-full mt-2",
                     cell: "text-center text-sm p-0 relative flex-1 focus-within:relative focus-within:z-20",
-                    day: "h-9 w-9 mx-auto p-0 font-normal text-white aria-selected:opacity-100 hover:bg-white/10 rounded-full transition-colors",
-                    day_selected: "text-white font-semibold rounded-full",
+                    day: "h-9 w-9 mx-auto p-0 font-normal aria-selected:opacity-100 hover:bg-orange-50 rounded-full transition-colors",
+                    day_selected: "font-semibold rounded-full text-white",
                     day_today: "font-bold",
                     day_outside: "opacity-30",
                     day_disabled: "opacity-25 cursor-not-allowed",
                   }}
                   styles={{
                     day_selected: { background: "#FF6A00" },
-                    day_today: { border: "1px solid #FF6A00" },
+                    day_today: {
+                      border: "1px solid #FF6A00",
+                      color: "#FF6A00",
+                    },
                   }}
                   data-ocid="book.calendar.panel"
                 />
@@ -161,12 +171,16 @@ export function BookPage() {
 
               {/* Time slots */}
               <div
-                className="rounded-2xl p-6 border border-hnc-border shadow-card"
-                style={{ background: "#112A3A" }}
+                className="rounded-2xl p-6 border"
+                style={{
+                  background: "#FFFFFF",
+                  borderColor: "#F0E8DE",
+                  boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+                }}
               >
                 <h2
                   className="text-sm font-semibold uppercase tracking-wide mb-5"
-                  style={{ color: "#A8B6C3" }}
+                  style={{ color: "#8B7355" }}
                 >
                   {selectedDate
                     ? `Available Slots — ${format(selectedDate, "MMMM d")}`
@@ -182,7 +196,7 @@ export function BookPage() {
                       className="w-10 h-10 mb-3 opacity-30"
                       style={{ color: "#FF6A00" }}
                     />
-                    <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                    <p className="text-sm" style={{ color: "#8B7355" }}>
                       Select a date to see available time slots
                     </p>
                   </div>
@@ -202,7 +216,7 @@ export function BookPage() {
                       className="w-10 h-10 mb-3 opacity-30"
                       style={{ color: "#FF6A00" }}
                     />
-                    <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                    <p className="text-sm" style={{ color: "#8B7355" }}>
                       No slots available for this date
                     </p>
                   </div>
@@ -223,21 +237,23 @@ export function BookPage() {
                               ? "opacity-40 cursor-not-allowed"
                               : selectedSlot === time
                                 ? "text-white border-transparent"
-                                : "text-white border-hnc-border hover:border-orange-400"
+                                : "border hover:border-orange-300 hover:bg-orange-50"
                           }`}
                           style={{
                             background:
                               selectedSlot === time
                                 ? "#FF6A00"
                                 : available
-                                  ? "#1A3A4F"
-                                  : "#1A3A4F",
+                                  ? "#FBF7F4"
+                                  : "#F5F0EA",
                             borderColor:
-                              selectedSlot === time ? "#FF6A00" : undefined,
+                              selectedSlot === time ? "#FF6A00" : "#EDE4D9",
+                            color:
+                              selectedSlot === time ? "#FFFFFF" : "#1A1A2E",
                           }}
                           data-ocid={`book.slots.item.${i + 1}`}
                         >
-                          <Clock className="w-3 h-3 inline mr-1 opacity-70" />
+                          <Clock className="w-3 h-3 inline mr-1 opacity-60" />
                           {time}
                         </button>
                       ))}
@@ -247,10 +263,10 @@ export function BookPage() {
                       <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="mt-4 p-4 rounded-xl border border-hnc-border"
+                        className="mt-4 p-4 rounded-xl border"
                         style={{
-                          background: "rgba(255,106,0,0.08)",
-                          borderColor: "rgba(255,106,0,0.3)",
+                          background: "rgba(255,106,0,0.06)",
+                          borderColor: "rgba(255,106,0,0.25)",
                         }}
                       >
                         <div className="flex items-center gap-2 mb-1">
@@ -258,14 +274,17 @@ export function BookPage() {
                             className="w-4 h-4"
                             style={{ color: "#FF6A00" }}
                           />
-                          <span className="text-sm font-semibold text-white">
+                          <span
+                            className="text-sm font-semibold"
+                            style={{ color: "#1A1A2E" }}
+                          >
                             {format(selectedDate, "MMMM d, yyyy")} at{" "}
                             {selectedSlot}
                           </span>
                         </div>
                         <p
                           className="text-xs mb-3"
-                          style={{ color: "#A8B6C3" }}
+                          style={{ color: "#8B7355" }}
                         >
                           40-minute coaching session with your coach
                         </p>
@@ -273,7 +292,11 @@ export function BookPage() {
                           onClick={handleConfirmBooking}
                           disabled={bookAppointment.isPending}
                           className="w-full h-10 font-semibold text-white rounded-xl"
-                          style={{ background: "#FF6A00" }}
+                          style={{
+                            background:
+                              "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                            boxShadow: "0 4px 12px rgba(255,106,0,0.3)",
+                          }}
                           data-ocid="book.confirm.primary_button"
                         >
                           {bookAppointment.isPending ? (
@@ -294,12 +317,16 @@ export function BookPage() {
 
             {/* Upcoming bookings */}
             <div
-              className="rounded-2xl p-6 border border-hnc-border shadow-card"
-              style={{ background: "#112A3A" }}
+              className="rounded-2xl p-6 border"
+              style={{
+                background: "#FFFFFF",
+                borderColor: "#F0E8DE",
+                boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+              }}
             >
               <h2
                 className="text-sm font-semibold uppercase tracking-wide mb-5"
-                style={{ color: "#A8B6C3" }}
+                style={{ color: "#8B7355" }}
               >
                 Upcoming Sessions
               </h2>
@@ -320,10 +347,10 @@ export function BookPage() {
                   data-ocid="book.bookings.empty_state"
                 >
                   <CalendarDays
-                    className="w-10 h-10 mb-3 opacity-30"
+                    className="w-10 h-10 mb-3 opacity-20"
                     style={{ color: "#FF6A00" }}
                   />
-                  <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                  <p className="text-sm" style={{ color: "#8B7355" }}>
                     No upcoming sessions. Book your first one above!
                   </p>
                 </div>
@@ -335,14 +362,17 @@ export function BookPage() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.05 }}
-                      className="flex items-center justify-between p-4 rounded-xl border border-hnc-border"
-                      style={{ background: "#1A3A4F" }}
+                      className="flex items-center justify-between p-4 rounded-xl border"
+                      style={{
+                        background: "#FBF7F4",
+                        borderColor: "#EDE4D9",
+                      }}
                       data-ocid={`book.bookings.item.${i + 1}`}
                     >
                       <div className="flex items-center gap-3">
                         <div
                           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                          style={{ background: "rgba(255,106,0,0.15)" }}
+                          style={{ background: "rgba(255,106,0,0.1)" }}
                         >
                           <Video
                             className="w-5 h-5"
@@ -350,12 +380,15 @@ export function BookPage() {
                           />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-white">
+                          <p
+                            className="text-sm font-semibold"
+                            style={{ color: "#1A1A2E" }}
+                          >
                             {booking.date} · {booking.timeSlot}
                           </p>
                           <p
                             className="text-xs mt-0.5"
-                            style={{ color: "#A8B6C3" }}
+                            style={{ color: "#8B7355" }}
                           >
                             40-min coaching session
                           </p>
@@ -365,9 +398,9 @@ export function BookPage() {
                         <Badge
                           className="text-xs font-medium"
                           style={{
-                            background: "rgba(34,197,94,0.15)",
-                            color: "#4ade80",
-                            border: "1px solid rgba(34,197,94,0.3)",
+                            background: "rgba(34,197,94,0.1)",
+                            color: "#16a34a",
+                            border: "1px solid rgba(34,197,94,0.25)",
                           }}
                         >
                           Booked
@@ -377,8 +410,8 @@ export function BookPage() {
                           size="sm"
                           onClick={() => handleCancelBooking(booking.id)}
                           disabled={cancelBooking.isPending}
-                          className="w-8 h-8 p-0 rounded-lg hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                          style={{ color: "#A8B6C3" }}
+                          className="w-8 h-8 p-0 rounded-lg hover:bg-red-50 hover:text-red-500 transition-colors"
+                          style={{ color: "#A89078" }}
                           data-ocid={`book.bookings.delete_button.${i + 1}`}
                         >
                           <X className="w-4 h-4" />

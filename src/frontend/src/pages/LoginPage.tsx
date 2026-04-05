@@ -62,26 +62,29 @@ export function LoginPage() {
       className="min-h-screen flex"
       style={{
         background:
-          "linear-gradient(135deg, #0d2235 0%, #142e42 60%, #0f2a3d 100%)",
+          "linear-gradient(145deg, #FFF8F0 0%, #FFFBF5 50%, #FFF3E8 100%)",
       }}
     >
-      {/* ─── Left panel ─────────────────────────────────────────── */}
+      {/* ─── Left panel ──────────────────────────────────────────────── */}
       <div
         className="hidden lg:flex lg:w-[52%] flex-col justify-between p-14"
         style={{
-          background: "rgba(10,25,38,0.6)",
-          borderRight: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,248,240,0.85)",
+          borderRight: "1px solid #F0E8DE",
         }}
       >
         {/* Logo */}
         <div className="flex items-center gap-3">
           <div
-            className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg"
+            className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-md"
             style={{ background: "linear-gradient(135deg, #FF6A00, #FF8C3A)" }}
           >
             <Dumbbell className="w-6 h-6 text-white" />
           </div>
-          <span className="text-white font-bold text-2xl tracking-tight">
+          <span
+            className="font-bold text-2xl tracking-tight"
+            style={{ color: "#1A1A2E" }}
+          >
             HN<span style={{ color: "#FF6A00" }}> Coach</span>
           </span>
         </div>
@@ -103,7 +106,10 @@ export function LoginPage() {
                 Your Personal Coach
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-white leading-snug">
+            <h1
+              className="text-4xl font-bold leading-snug"
+              style={{ color: "#1A1A2E" }}
+            >
               Your coach is not less than{" "}
               <span
                 style={{
@@ -116,7 +122,7 @@ export function LoginPage() {
             </h1>
             <p
               className="mt-4 text-base leading-relaxed"
-              style={{ color: "#B0BFCC" }}
+              style={{ color: "#8B7355" }}
             >
               Ask from your heart — we&apos;re here to listen, guide, and grow
               with you.
@@ -131,27 +137,30 @@ export function LoginPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 + i * 0.1 }}
-                className="p-5 rounded-2xl border"
+                className="p-5 rounded-2xl border bg-white"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  borderColor: "rgba(255,255,255,0.08)",
+                  borderColor: "#F0E8DE",
+                  boxShadow: "0 2px 12px rgba(255,106,0,0.06)",
                 }}
               >
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                  style={{ background: "rgba(255,106,0,0.15)" }}
+                  style={{ background: "rgba(255,106,0,0.1)" }}
                 >
                   <topic.icon
                     className="w-5 h-5"
                     style={{ color: "#FF6A00" }}
                   />
                 </div>
-                <p className="font-semibold text-white text-sm mb-1">
+                <p
+                  className="font-semibold text-sm mb-1"
+                  style={{ color: "#1A1A2E" }}
+                >
                   {topic.label}
                 </p>
                 <p
                   className="text-xs leading-relaxed"
-                  style={{ color: "#8FA3B4" }}
+                  style={{ color: "#8B7355" }}
                 >
                   {topic.desc}
                 </p>
@@ -166,26 +175,26 @@ export function LoginPage() {
             transition={{ duration: 0.5, delay: 0.7 }}
             className="flex items-center gap-3 px-5 py-4 rounded-2xl border"
             style={{
-              background: "rgba(255,106,0,0.07)",
-              borderColor: "rgba(255,106,0,0.2)",
+              background: "rgba(255,106,0,0.06)",
+              borderColor: "rgba(255,106,0,0.25)",
             }}
           >
             <Lock
               className="w-5 h-5 flex-shrink-0"
               style={{ color: "#FF6A00" }}
             />
-            <span className="text-sm font-medium text-white">
+            <span className="text-sm font-medium" style={{ color: "#1A1A2E" }}>
               100% Confidential Chat &nbsp;&middot;&nbsp; 100% Privacy 🔏
             </span>
           </motion.div>
         </div>
 
-        <p className="text-xs" style={{ color: "#6B7E8E" }}>
+        <p className="text-xs" style={{ color: "#A89078" }}>
           &copy; {new Date().getFullYear()} HN Coach. All rights reserved.
         </p>
       </div>
 
-      {/* ─── Right panel ─────────────────────────────────────────── */}
+      {/* ─── Right panel ──────────────────────────────────────────────── */}
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
         <motion.div
           initial={{ opacity: 0, y: 28 }}
@@ -196,14 +205,17 @@ export function LoginPage() {
           {/* Mobile logo */}
           <div className="flex items-center justify-center gap-2 mb-8 lg:hidden">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-md"
               style={{
                 background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
               }}
             >
               <Dumbbell className="w-5 h-5 text-white" />
             </div>
-            <span className="text-white font-bold text-xl tracking-tight">
+            <span
+              className="font-bold text-xl tracking-tight"
+              style={{ color: "#1A1A2E" }}
+            >
               HN<span style={{ color: "#FF6A00" }}> Coach</span>
             </span>
           </div>
@@ -212,16 +224,15 @@ export function LoginPage() {
           <div
             className="rounded-3xl border overflow-hidden"
             style={{
-              background: "rgba(255,255,255,0.06)",
-              borderColor: "rgba(255,255,255,0.1)",
-              backdropFilter: "blur(24px)",
+              background: "#FFFFFF",
+              borderColor: "#F0E8DE",
               boxShadow:
-                "0 32px 80px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.05) inset",
+                "0 20px 60px rgba(255,106,0,0.1), 0 4px 20px rgba(0,0,0,0.06)",
             }}
           >
             {/* Card top accent bar */}
             <div
-              className="h-1 w-full"
+              className="h-1.5 w-full"
               style={{
                 background: "linear-gradient(90deg, #FF6A00, #FF8C3A, #FFAB6E)",
               }}
@@ -233,8 +244,8 @@ export function LoginPage() {
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
                   style={{
-                    background: "rgba(255,106,0,0.15)",
-                    border: "1px solid rgba(255,106,0,0.25)",
+                    background: "rgba(255,106,0,0.1)",
+                    border: "1px solid rgba(255,106,0,0.2)",
                   }}
                 >
                   <MessageCircleHeart
@@ -242,12 +253,15 @@ export function LoginPage() {
                     style={{ color: "#FF6A00" }}
                   />
                 </div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Welcome Back
+                <h2
+                  className="text-2xl font-bold mb-2"
+                  style={{ color: "#1A1A2E" }}
+                >
+                  Welcome Back!
                 </h2>
                 <p
                   className="text-sm leading-relaxed"
-                  style={{ color: "#8FA3B4" }}
+                  style={{ color: "#8B7355" }}
                 >
                   Sign in to connect with your personal wellness coach
                 </p>
@@ -262,7 +276,7 @@ export function LoginPage() {
                         className="w-4 h-4 flex-shrink-0"
                         style={{ color: "#FF6A00" }}
                       />
-                      <span className="text-xs" style={{ color: "#B0BFCC" }}>
+                      <span className="text-xs" style={{ color: "#6B5E4E" }}>
                         {feature}
                       </span>
                     </div>
@@ -273,7 +287,7 @@ export function LoginPage() {
               {/* Divider — mobile only */}
               <div
                 className="w-full border-t mb-6 lg:hidden"
-                style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                style={{ borderColor: "#F0E8DE" }}
               />
 
               {/* Topic pills */}
@@ -283,8 +297,8 @@ export function LoginPage() {
                     key={pill}
                     className="px-3.5 py-1 rounded-full text-xs font-semibold"
                     style={{
-                      background: "rgba(255,106,0,0.12)",
-                      color: "#FF8C3A",
+                      background: "rgba(255,106,0,0.1)",
+                      color: "#FF6A00",
                       border: "1px solid rgba(255,106,0,0.22)",
                     }}
                   >
@@ -322,17 +336,17 @@ export function LoginPage() {
               <div className="relative flex items-center gap-3 my-5">
                 <div
                   className="flex-1 border-t"
-                  style={{ borderColor: "rgba(255,255,255,0.1)" }}
+                  style={{ borderColor: "#F0E8DE" }}
                 />
                 <span
                   className="text-xs font-medium"
-                  style={{ color: "#6B7E8E" }}
+                  style={{ color: "#A89078" }}
                 >
                   Are you a coach?
                 </span>
                 <div
                   className="flex-1 border-t"
-                  style={{ borderColor: "rgba(255,255,255,0.1)" }}
+                  style={{ borderColor: "#F0E8DE" }}
                 />
               </div>
 
@@ -342,9 +356,9 @@ export function LoginPage() {
                   variant="outline"
                   className="w-full h-12 text-sm font-semibold rounded-xl flex items-center gap-2"
                   style={{
-                    borderColor: "rgba(255,255,255,0.12)",
-                    color: "#B0BFCC",
-                    background: "rgba(255,255,255,0.04)",
+                    borderColor: "#EDE4D9",
+                    color: "#6B5E4E",
+                    background: "#FAFAF8",
                     height: "48px",
                   }}
                   data-ocid="login.admin.link"
@@ -360,9 +374,9 @@ export function LoginPage() {
               {/* Footer note */}
               <p
                 className="mt-6 text-xs text-center"
-                style={{ color: "#4E636E" }}
+                style={{ color: "#A89078" }}
               >
-                Powered by Internet Identity &mdash; secure, passwordless auth
+                Powered by Internet Identity — secure, passwordless auth
               </p>
             </div>
           </div>

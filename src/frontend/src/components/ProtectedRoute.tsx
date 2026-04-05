@@ -1,8 +1,6 @@
 import { Navigate, useRouterState } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetCallerUserProfile } from "../hooks/useQueries";
 
@@ -40,15 +38,11 @@ export function isProfileComplete(
   );
 }
 
-// Safety timeout: stop waiting after this many ms
-const LOADING_TIMEOUT_MS = 12000;
-
 export function ProtectedRoute({
   children,
   isProfilePage = false,
 }: ProtectedRouteProps) {
   const { identity, isInitializing } = useInternetIdentity();
-  const { isFetching: actorFetching } = useActor();
   const {
     data: profile,
     isLoading: profileLoading,
@@ -57,64 +51,30 @@ export function ProtectedRoute({
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
 
-  const [timedOut, setTimedOut] = useState(false);
+  // Safety timeout: if we're still initializing after 6s, stop blocking
+  const [initTimedOut, setInitTimedOut] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Loading if: identity is still initializing, or actor is fetching,
-  // or profile hasn't loaded yet (only if we have a non-anonymous identity)
-  const stillLoading =
-    isInitializing ||
-    actorFetching ||
-    (!!identity &&
-      !identity.getPrincipal().isAnonymous() &&
-      profileLoading &&
-      !profileFetched);
-
   useEffect(() => {
-    if (stillLoading && !timedOut) {
-      if (!timerRef.current) {
-        timerRef.current = setTimeout(() => {
-          setTimedOut(true);
-        }, LOADING_TIMEOUT_MS);
-      }
-    } else {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      if (!stillLoading) {
-        setTimedOut(false);
-      }
+    if (isInitializing && !initTimedOut) {
+      timerRef.current = setTimeout(() => setInitTimedOut(true), 6000);
+    } else if (!isInitializing && timerRef.current) {
+      clearTimeout(timerRef.current);
     }
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [stillLoading, timedOut]);
+  }, [isInitializing, initTimedOut]);
 
-  const isWaiting = !timedOut && stillLoading;
+  const isAnonymous = !identity || identity.getPrincipal().isAnonymous();
 
-  if (isWaiting) {
-    return (
-      <div
-        className="min-h-screen flex items-center justify-center"
-        style={{ background: "#071824" }}
-      >
-        <div className="flex flex-col items-center gap-3">
-          <Loader2
-            className="w-8 h-8 animate-spin"
-            style={{ color: "#FF6A00" }}
-          />
-          <p style={{ color: "#A8B6C3" }}>Loading...</p>
-        </div>
-      </div>
-    );
+  // Block render while auth is initializing (with timeout fallback)
+  if (isInitializing && !initTimedOut) {
+    return null;
   }
 
   // Not logged in → go to login
-  if (!identity || identity.getPrincipal().isAnonymous()) {
+  if (isAnonymous) {
     return <Navigate to="/login" />;
   }
 
@@ -123,7 +83,12 @@ export function ProtectedRoute({
     return <>{children}</>;
   }
 
-  // Other pages: redirect to /profile only when fetch is done and profile is incomplete
+  // While profile is still loading for the first time, block rendering chat/book
+  if (profileLoading && !profileFetched) {
+    return null;
+  }
+
+  // Profile fetch done and incomplete → send to profile
   if (
     profileFetched &&
     !isProfileComplete(profile) &&

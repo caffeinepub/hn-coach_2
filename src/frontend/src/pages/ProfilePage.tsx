@@ -217,7 +217,7 @@ export function ProfilePage() {
       <ProtectedRoute isProfilePage>
         <div
           className="min-h-screen flex flex-col"
-          style={{ background: "#0B2232" }}
+          style={{ background: "#FFFBF5" }}
         >
           <NavBar />
           <div className="flex-1 flex items-center justify-center">
@@ -236,7 +236,7 @@ export function ProfilePage() {
     <ProtectedRoute isProfilePage>
       <div
         className="min-h-screen flex flex-col"
-        style={{ background: "#0B2232" }}
+        style={{ background: "#FFFBF5" }}
       >
         <NavBar />
 
@@ -254,8 +254,8 @@ export function ProfilePage() {
                 transition={{ duration: 0.4 }}
                 className="mb-6 rounded-xl border px-5 py-4 flex items-start gap-3"
                 style={{
-                  background: "rgba(255,106,0,0.08)",
-                  borderColor: "#FF6A00",
+                  background: "rgba(255,106,0,0.06)",
+                  borderColor: "rgba(255,106,0,0.3)",
                 }}
               >
                 <AlertCircle
@@ -263,10 +263,13 @@ export function ProfilePage() {
                   style={{ color: "#FF6A00" }}
                 />
                 <div>
-                  <p className="font-semibold text-white text-sm">
+                  <p
+                    className="font-semibold text-sm"
+                    style={{ color: "#1A1A2E" }}
+                  >
                     Welcome! Please complete your profile first
                   </p>
-                  <p className="text-xs mt-1" style={{ color: "#A8B6C3" }}>
+                  <p className="text-xs mt-1" style={{ color: "#8B7355" }}>
                     All fields and a profile photo are required before you can
                     start chatting or booking appointments.
                   </p>
@@ -281,19 +284,23 @@ export function ProfilePage() {
               transition={{ duration: 0.4, delay: 0.1 }}
               className="mb-6 rounded-2xl border p-5"
               style={{
-                background: "#112A3A",
-                borderColor: "rgba(168,182,195,0.15)",
+                background: "#FFFFFF",
+                borderColor: "#F0E8DE",
+                boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
               }}
               data-ocid="profile.progress.card"
             >
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-white">
+                <p
+                  className="text-sm font-semibold"
+                  style={{ color: "#1A1A2E" }}
+                >
                   Profile Completion
                 </p>
                 <span
                   className="text-sm font-bold tabular-nums"
                   style={{
-                    color: progressPercent === 100 ? "#4ade80" : "#FF6A00",
+                    color: progressPercent === 100 ? "#22c55e" : "#FF6A00",
                   }}
                 >
                   {filledCount} / {totalCount} — {progressPercent}%
@@ -302,14 +309,14 @@ export function ProfilePage() {
 
               <div
                 className="w-full h-2.5 rounded-full overflow-hidden mb-4"
-                style={{ background: "#1A3A4F" }}
+                style={{ background: "#F0E8DE" }}
               >
                 <motion.div
                   className="h-full rounded-full"
                   style={{
                     background:
                       progressPercent === 100
-                        ? "#4ade80"
+                        ? "#22c55e"
                         : "linear-gradient(90deg, #FF6A00, #ff9a40)",
                   }}
                   initial={{ width: 0 }}
@@ -325,24 +332,24 @@ export function ProfilePage() {
                     className="flex items-center gap-2 px-3 py-2 rounded-lg"
                     style={{
                       background: field.filled
-                        ? "rgba(74,222,128,0.07)"
-                        : "rgba(168,182,195,0.06)",
+                        ? "rgba(34,197,94,0.08)"
+                        : "rgba(0,0,0,0.04)",
                     }}
                   >
                     {field.filled ? (
                       <Check
                         className="w-3.5 h-3.5 flex-shrink-0"
-                        style={{ color: "#4ade80" }}
+                        style={{ color: "#22c55e" }}
                       />
                     ) : (
                       <Circle
                         className="w-3.5 h-3.5 flex-shrink-0 opacity-40"
-                        style={{ color: "#A8B6C3" }}
+                        style={{ color: "#A89078" }}
                       />
                     )}
                     <span
                       className="text-xs font-medium truncate"
-                      style={{ color: field.filled ? "#e2e8f0" : "#A8B6C3" }}
+                      style={{ color: field.filled ? "#1A1A2E" : "#8B7355" }}
                     >
                       {field.label}
                     </span>
@@ -356,17 +363,20 @@ export function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => navigate({ to: "/" })}
-                  className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                  className="p-2 rounded-lg hover:bg-black/5 transition-colors"
                   data-ocid="profile.back.button"
                 >
-                  <ArrowLeft className="w-5 h-5" style={{ color: "#A8B6C3" }} />
+                  <ArrowLeft className="w-5 h-5" style={{ color: "#8B7355" }} />
                 </button>
               )}
               <div>
-                <h1 className="text-2xl font-display font-bold text-white">
+                <h1
+                  className="text-2xl font-display font-bold"
+                  style={{ color: "#1A1A2E" }}
+                >
                   {isFirstTimeSetup ? "Complete Your Profile" : "My Profile"}
                 </h1>
-                <p className="text-sm" style={{ color: "#A8B6C3" }}>
+                <p className="text-sm" style={{ color: "#8B7355" }}>
                   {isFirstTimeSetup
                     ? "Step 1 of 1 — required to access the app"
                     : "Update your personal information"}
@@ -375,8 +385,12 @@ export function ProfilePage() {
             </div>
 
             <div
-              className="rounded-2xl p-6 sm:p-8 border border-hnc-border shadow-card"
-              style={{ background: "#112A3A" }}
+              className="rounded-2xl p-6 sm:p-8 border shadow-card"
+              style={{
+                background: "#FFFFFF",
+                borderColor: "#F0E8DE",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+              }}
             >
               {/* Avatar section */}
               <div className="flex flex-col items-center mb-8">
@@ -395,7 +409,7 @@ export function ProfilePage() {
                     )}
                     <AvatarFallback
                       className="text-2xl font-bold text-white"
-                      style={{ background: "#1A3A4F" }}
+                      style={{ background: "#FF6A00" }}
                     >
                       {initials}
                     </AvatarFallback>
@@ -404,8 +418,8 @@ export function ProfilePage() {
                     type="button"
                     onClick={handleAvatarClick}
                     disabled={uploading}
-                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center border-2 border-hnc-card"
-                    style={{ background: "#FF6A00" }}
+                    className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center border-2"
+                    style={{ background: "#FF6A00", borderColor: "#FFFFFF" }}
                     data-ocid="profile.upload_button"
                   >
                     {uploading ? (
@@ -415,7 +429,7 @@ export function ProfilePage() {
                     )}
                   </button>
                 </div>
-                <p className="mt-3 text-sm" style={{ color: "#A8B6C3" }}>
+                <p className="mt-3 text-sm" style={{ color: "#8B7355" }}>
                   Click to upload profile photo
                   <span style={{ color: "#FF6A00" }}>*</span>
                 </p>
@@ -439,7 +453,8 @@ export function ProfilePage() {
                 <div className="sm:col-span-2">
                   <Label
                     htmlFor="name"
-                    className="text-sm font-medium text-white mb-1.5 flex items-center gap-1.5"
+                    className="text-sm font-medium mb-1.5 flex items-center gap-1.5"
+                    style={{ color: "#1A1A2E" }}
                   >
                     <User
                       className="w-3.5 h-3.5"
@@ -454,11 +469,12 @@ export function ProfilePage() {
                       setForm((prev) => ({ ...prev, name: e.target.value }))
                     }
                     placeholder="Your full name"
-                    className="h-11 rounded-xl border-hnc-border text-white placeholder:text-hnc-muted"
+                    className="h-11 rounded-xl"
                     style={{
-                      background: "#1A3A4F",
+                      background: "#FBF7F4",
                       borderColor:
-                        errors.name && submitted ? "#ef4444" : undefined,
+                        errors.name && submitted ? "#ef4444" : "#EDE4D9",
+                      color: "#1A1A2E",
                     }}
                     data-ocid="profile.name.input"
                   />
@@ -472,7 +488,8 @@ export function ProfilePage() {
                 <div>
                   <Label
                     htmlFor="age"
-                    className="text-sm font-medium text-white mb-1.5 block"
+                    className="text-sm font-medium mb-1.5 block"
+                    style={{ color: "#1A1A2E" }}
                   >
                     Age <span style={{ color: "#FF6A00" }}>*</span>
                   </Label>
@@ -484,11 +501,12 @@ export function ProfilePage() {
                       setForm((prev) => ({ ...prev, age: e.target.value }))
                     }
                     placeholder="Your age"
-                    className="h-11 rounded-xl border-hnc-border text-white placeholder:text-hnc-muted"
+                    className="h-11 rounded-xl"
                     style={{
-                      background: "#1A3A4F",
+                      background: "#FBF7F4",
                       borderColor:
-                        errors.age && submitted ? "#ef4444" : undefined,
+                        errors.age && submitted ? "#ef4444" : "#EDE4D9",
+                      color: "#1A1A2E",
                     }}
                     data-ocid="profile.age.input"
                   />
@@ -502,7 +520,8 @@ export function ProfilePage() {
                 <div>
                   <Label
                     htmlFor="whatsApp"
-                    className="text-sm font-medium text-white mb-1.5 block"
+                    className="text-sm font-medium mb-1.5 block"
+                    style={{ color: "#1A1A2E" }}
                   >
                     WhatsApp Number <span style={{ color: "#FF6A00" }}>*</span>
                   </Label>
@@ -516,13 +535,14 @@ export function ProfilePage() {
                       }))
                     }
                     placeholder="+1 234 567 8900"
-                    className="h-11 rounded-xl border-hnc-border text-white placeholder:text-hnc-muted"
+                    className="h-11 rounded-xl"
                     style={{
-                      background: "#1A3A4F",
+                      background: "#FBF7F4",
                       borderColor:
                         errors.whatsAppNumber && submitted
                           ? "#ef4444"
-                          : undefined,
+                          : "#EDE4D9",
+                      color: "#1A1A2E",
                     }}
                     data-ocid="profile.whatsapp.input"
                   />
@@ -536,7 +556,8 @@ export function ProfilePage() {
                 <div>
                   <Label
                     htmlFor="email"
-                    className="text-sm font-medium text-white mb-1.5 block"
+                    className="text-sm font-medium mb-1.5 block"
+                    style={{ color: "#1A1A2E" }}
                   >
                     Email Address <span style={{ color: "#FF6A00" }}>*</span>
                   </Label>
@@ -548,11 +569,12 @@ export function ProfilePage() {
                       setForm((prev) => ({ ...prev, email: e.target.value }))
                     }
                     placeholder="your@email.com"
-                    className="h-11 rounded-xl border-hnc-border text-white placeholder:text-hnc-muted"
+                    className="h-11 rounded-xl"
                     style={{
-                      background: "#1A3A4F",
+                      background: "#FBF7F4",
                       borderColor:
-                        errors.email && submitted ? "#ef4444" : undefined,
+                        errors.email && submitted ? "#ef4444" : "#EDE4D9",
+                      color: "#1A1A2E",
                     }}
                     data-ocid="profile.email.input"
                   />
@@ -566,7 +588,8 @@ export function ProfilePage() {
                 <div>
                   <Label
                     htmlFor="weight"
-                    className="text-sm font-medium text-white mb-1.5 block"
+                    className="text-sm font-medium mb-1.5 block"
+                    style={{ color: "#1A1A2E" }}
                   >
                     Weight <span style={{ color: "#FF6A00" }}>*</span>
                   </Label>
@@ -577,11 +600,12 @@ export function ProfilePage() {
                       setForm((prev) => ({ ...prev, weight: e.target.value }))
                     }
                     placeholder="e.g. 75 kg"
-                    className="h-11 rounded-xl border-hnc-border text-white placeholder:text-hnc-muted"
+                    className="h-11 rounded-xl"
                     style={{
-                      background: "#1A3A4F",
+                      background: "#FBF7F4",
                       borderColor:
-                        errors.weight && submitted ? "#ef4444" : undefined,
+                        errors.weight && submitted ? "#ef4444" : "#EDE4D9",
+                      color: "#1A1A2E",
                     }}
                     data-ocid="profile.weight.input"
                   />
@@ -595,7 +619,8 @@ export function ProfilePage() {
                 <div>
                   <Label
                     htmlFor="height"
-                    className="text-sm font-medium text-white mb-1.5 block"
+                    className="text-sm font-medium mb-1.5 block"
+                    style={{ color: "#1A1A2E" }}
                   >
                     Height <span style={{ color: "#FF6A00" }}>*</span>
                   </Label>
@@ -606,11 +631,12 @@ export function ProfilePage() {
                       setForm((prev) => ({ ...prev, height: e.target.value }))
                     }
                     placeholder="e.g. 175 cm"
-                    className="h-11 rounded-xl border-hnc-border text-white placeholder:text-hnc-muted"
+                    className="h-11 rounded-xl"
                     style={{
-                      background: "#1A3A4F",
+                      background: "#FBF7F4",
                       borderColor:
-                        errors.height && submitted ? "#ef4444" : undefined,
+                        errors.height && submitted ? "#ef4444" : "#EDE4D9",
+                      color: "#1A1A2E",
                     }}
                     data-ocid="profile.height.input"
                   />
@@ -624,7 +650,8 @@ export function ProfilePage() {
                 <div className="sm:col-span-2">
                   <Label
                     htmlFor="targetGoal"
-                    className="text-sm font-medium text-white mb-1.5 block"
+                    className="text-sm font-medium mb-1.5 block"
+                    style={{ color: "#1A1A2E" }}
                   >
                     Target / Goal <span style={{ color: "#FF6A00" }}>*</span>
                   </Label>
@@ -639,11 +666,12 @@ export function ProfilePage() {
                     }
                     placeholder="What do you want to achieve? e.g. Lose 10kg, run 5k, build muscle..."
                     rows={3}
-                    className="rounded-xl border-hnc-border text-white placeholder:text-hnc-muted resize-none"
+                    className="rounded-xl resize-none"
                     style={{
-                      background: "#1A3A4F",
+                      background: "#FBF7F4",
                       borderColor:
-                        errors.targetGoal && submitted ? "#ef4444" : undefined,
+                        errors.targetGoal && submitted ? "#ef4444" : "#EDE4D9",
+                      color: "#1A1A2E",
                     }}
                     data-ocid="profile.targetgoal.textarea"
                   />
@@ -655,7 +683,7 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              <p className="mt-4 text-xs" style={{ color: "#A8B6C3" }}>
+              <p className="mt-4 text-xs" style={{ color: "#A89078" }}>
                 <span style={{ color: "#FF6A00" }}>*</span> All fields are
                 required
               </p>
@@ -665,7 +693,10 @@ export function ProfilePage() {
                   onClick={handleSave}
                   disabled={saveProfile.isPending}
                   className="flex-1 h-11 font-semibold text-white rounded-xl"
-                  style={{ background: "#FF6A00" }}
+                  style={{
+                    background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                    boxShadow: "0 4px 16px rgba(255,106,0,0.3)",
+                  }}
                   data-ocid="profile.save.submit_button"
                 >
                   {saveProfile.isPending ? (

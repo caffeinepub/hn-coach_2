@@ -237,6 +237,7 @@ function getAdminCategoryLabel(reason: PointReason): string {
 }
 
 function PointsBar({ selectedUser }: { selectedUser: Principal }) {
+  const { actor } = useActor();
   const { data: totalPoints, isLoading: pointsLoading } =
     useGetUserPoints(selectedUser);
   const { data: pointHistory, isLoading: historyLoading } =
@@ -248,6 +249,53 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
   const [showHistory, setShowHistory] = useState(false);
 
   const total = Number(totalPoints ?? BigInt(0));
+
+  // Helper: auto-award Daily Bonus (50 pts) if user earned 110+ pts today
+  // and hasn't received a daily bonus yet today.
+  const checkAndAwardDailyBonus = async () => {
+    if (!actor) return;
+    try {
+      const history: import("../backend").PointRecord[] =
+        await actor.getUserPointHistory(selectedUser);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayStartNs = BigInt(todayStart.getTime()) * BigInt(1_000_000);
+
+      // Sum today's points (excluding any daily bonus)
+      let todayNonBonus = 0;
+      let alreadyHasDailyBonusToday = false;
+      for (const record of history) {
+        if (record.timestamp >= todayStartNs) {
+          if (record.reason === PointReason.dailyBonus) {
+            alreadyHasDailyBonusToday = true;
+          } else {
+            todayNonBonus += Number(record.points);
+          }
+        }
+      }
+
+      // Award daily bonus if 110+ pts earned today and not yet awarded
+      if (todayNonBonus >= 110 && !alreadyHasDailyBonusToday) {
+        await actor.givePoints(
+          selectedUser,
+          BigInt(50),
+          PointReason.dailyBonus,
+          "Daily Bonus — auto-awarded for 110+ pts today",
+        );
+        const bonusMsg =
+          "🌟 Daily Bonus Unlocked! You earned 50 pts — Daily Bonus: You hit 110+ pts today!";
+        await actor.sendMessageToUser(
+          selectedUser,
+          bonusMsg,
+          MessageType.text,
+          null,
+        );
+        toast.success("Daily Bonus auto-awarded: +50 pts!");
+      }
+    } catch {
+      // silently ignore — bonus auto-award is best-effort
+    }
+  };
 
   const handleCustomGive = async () => {
     const pts = Number.parseInt(customPoints, 10);
@@ -271,6 +319,8 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
       toast.success(`Points awarded! New total: ${Number(newTotal)} pts`);
       setCustomPoints("");
       setRemark("");
+      // Auto-check and award Daily Bonus if threshold met
+      await checkAndAwardDailyBonus();
     } catch {
       toast.error("Failed to give points");
     }

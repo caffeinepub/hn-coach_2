@@ -8,23 +8,28 @@ export function Footer() {
 
   return (
     <footer
-      className="mt-auto border-t border-hnc-border"
-      style={{ background: "#071824" }}
+      className="mt-auto border-t"
+      style={{ background: "#FFFBF5", borderColor: "#F0E8DE" }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: "#FF6A00" }}
+              style={{
+                background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+              }}
             >
               <Dumbbell className="w-4 h-4 text-white" />
             </div>
-            <span className="text-white font-display font-bold">
+            <span
+              className="font-display font-bold"
+              style={{ color: "#1A1A2E" }}
+            >
               HN<span style={{ color: "#FF6A00" }}> Coach</span>
             </span>
           </div>
-          <p className="text-sm" style={{ color: "#A8B6C3" }}>
+          <p className="text-sm" style={{ color: "#8B7355" }}>
             &copy; {year}. Built with{" "}
             <span style={{ color: "#FF6A00" }}>♥</span> using{" "}
             <a
