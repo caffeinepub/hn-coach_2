@@ -4,14 +4,9 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Footer } from "../components/Footer";
 import { LoginModal } from "../components/LoginModal";
-import { NameModal } from "../components/NameModal";
 import { NavBar } from "../components/NavBar";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetCallerUserProfile } from "../hooks/useQueries";
-
-function isProfileComplete(profile: { name?: string } | null | undefined) {
-  return !!profile?.name?.trim();
-}
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -19,48 +14,27 @@ export function HomePage() {
   const { data: profile } = useGetCallerUserProfile();
 
   const isAnonymous = !identity || identity.getPrincipal().isAnonymous();
-  const hasName = isProfileComplete(profile);
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   // "chat" | "book" | null — remembers where the user wanted to go
   const [pendingDestination, setPendingDestination] = useState<
     "chat" | "book" | null
   >(null);
-  const [showNameModal, setShowNameModal] = useState(false);
 
-  // After login: if a destination was pending, navigate there (after name is set)
+  // After login: navigate directly to the pending destination
   useEffect(() => {
     if (!isAnonymous && pendingDestination) {
-      if (!hasName) {
-        // Show name modal first
-        setShowLoginModal(false);
-        setShowNameModal(true);
-      } else {
-        // All good, navigate
-        const dest = pendingDestination;
-        setPendingDestination(null);
-        navigate({ to: dest === "chat" ? "/chat" : "/book" });
-      }
+      const dest = pendingDestination;
+      setPendingDestination(null);
+      navigate({ to: dest === "chat" ? "/chat" : "/book" });
     }
-  }, [isAnonymous, hasName, pendingDestination, navigate]);
+  }, [isAnonymous, pendingDestination, navigate]);
 
   const handleCardClick = (dest: "chat" | "book") => {
     if (isAnonymous) {
       setPendingDestination(dest);
       setShowLoginModal(true);
-    } else if (!hasName) {
-      setPendingDestination(dest);
-      setShowNameModal(true);
     } else {
-      navigate({ to: dest === "chat" ? "/chat" : "/book" });
-    }
-  };
-
-  const handleNameComplete = () => {
-    setShowNameModal(false);
-    if (pendingDestination) {
-      const dest = pendingDestination;
-      setPendingDestination(null);
       navigate({ to: dest === "chat" ? "/chat" : "/book" });
     }
   };
@@ -250,9 +224,6 @@ export function HomePage() {
         }}
         reason="Sign in to chat with your coach or book an appointment."
       />
-
-      {/* Name modal — shown after login if name not yet set */}
-      <NameModal open={showNameModal} onComplete={handleNameComplete} />
     </div>
   );
 }
