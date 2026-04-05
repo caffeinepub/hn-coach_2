@@ -2,12 +2,24 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Dumbbell, LogOut } from "lucide-react";
+import { Download, Dumbbell, LogOut } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useGetCallerUnreadCount,
   useGetCallerUserProfile,
 } from "../hooks/useQueries";
+
+// Capture the beforeinstallprompt event globally as early as possible
+let _deferredInstallPrompt: any = null;
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    _deferredInstallPrompt = e;
+    // Dispatch a custom event so any mounted component can react
+    window.dispatchEvent(new Event("pwa-installable"));
+  });
+}
 
 export function NavBar() {
   const { clear, identity } = useInternetIdentity();
@@ -15,8 +27,45 @@ export function NavBar() {
   const navigate = useNavigate();
   const { data: profile } = useGetCallerUserProfile();
   const { data: unreadCount } = useGetCallerUnreadCount();
+  const [installPrompt, setInstallPrompt] = useState<any>(
+    _deferredInstallPrompt,
+  );
+  const [installed, setInstalled] = useState(false);
+  const installPromptRef = useRef(installPrompt);
+  installPromptRef.current = installPrompt;
 
   const hasUnread = unreadCount !== undefined && unreadCount > BigInt(0);
+
+  useEffect(() => {
+    // Pick up the event if it fired before mount
+    if (_deferredInstallPrompt) {
+      setInstallPrompt(_deferredInstallPrompt);
+    }
+    const onInstallable = () => {
+      setInstallPrompt(_deferredInstallPrompt);
+    };
+    const onInstalled = () => {
+      setInstalled(true);
+      setInstallPrompt(null);
+    };
+    window.addEventListener("pwa-installable", onInstallable);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => {
+      window.removeEventListener("pwa-installable", onInstallable);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPromptRef.current) return;
+    installPromptRef.current.prompt();
+    const { outcome } = await installPromptRef.current.userChoice;
+    if (outcome === "accepted") {
+      setInstalled(true);
+    }
+    setInstallPrompt(null);
+    _deferredInstallPrompt = null;
+  };
 
   const handleLogout = async () => {
     await clear();
@@ -33,6 +82,8 @@ export function NavBar() {
         .toUpperCase()
         .slice(0, 2)
     : identity?.getPrincipal().toString().slice(0, 2).toUpperCase() || "U";
+
+  const showInstall = !!installPrompt && !installed;
 
   return (
     <header
@@ -60,7 +111,39 @@ export function NavBar() {
           </button>
 
           {/* Right side */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* PWA Install button */}
+            {showInstall && (
+              <Button
+                size="sm"
+                onClick={handleInstall}
+                className="font-semibold text-xs hidden sm:flex items-center gap-1.5"
+                style={{
+                  background: "#FF6A00",
+                  color: "white",
+                  border: "none",
+                }}
+                title="Install HN Coach app"
+                data-ocid="nav.install_pwa.button"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Install App
+              </Button>
+            )}
+            {/* Mobile install icon only */}
+            {showInstall && (
+              <button
+                type="button"
+                onClick={handleInstall}
+                className="sm:hidden flex items-center justify-center w-8 h-8 rounded-lg"
+                style={{ background: "rgba(255,106,0,0.15)" }}
+                title="Install HN Coach app"
+                data-ocid="nav.install_pwa.button_mobile"
+              >
+                <Download className="w-4 h-4" style={{ color: "#FF6A00" }} />
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => navigate({ to: "/profile" })}

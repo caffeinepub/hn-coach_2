@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
@@ -87,6 +88,7 @@ function getFieldStatuses(
 
 export function ProfilePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: profile, isLoading, isFetched } = useGetCallerUserProfile();
   const saveProfile = useSaveUserProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -182,6 +184,9 @@ export function ProfilePage() {
 
     try {
       await saveProfile.mutateAsync(profileData);
+      // Set the profile data in the cache immediately so ProtectedRoute
+      // sees a complete profile before we navigate away from /profile.
+      queryClient.setQueryData(["currentUserProfile"], profileData);
       toast.success("Profile saved successfully!");
       navigate({ to: "/" });
     } catch (err) {

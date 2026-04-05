@@ -1,0 +1,18 @@
+{
+  "name": "HN Coach",
+  "short_name": "HN Coach",
+  "description": "Your personal wellness and lifestyle coaching app",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#071824",
+  "theme_color": "#FF6A00",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ]
+}

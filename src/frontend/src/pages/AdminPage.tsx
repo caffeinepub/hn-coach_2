@@ -61,6 +61,7 @@ import {
   useSendMessageToUser,
 } from "../hooks/useQueries";
 import { StorageClient } from "../utils/StorageClient";
+import { showPushNotification } from "../utils/notifications";
 
 const ADMIN_PASSWORD = "hncoach2024";
 const ADMIN_AUTH_KEY = "hncoach_admin_auth";
@@ -412,63 +413,68 @@ function PointsBar({ selectedUser }: { selectedUser: Principal }) {
               No points awarded yet
             </p>
           ) : (
-            <ScrollArea
-              className="max-h-40"
-              data-ocid="admin.points_history.panel"
+            <div
+              className="overflow-hidden rounded-lg"
+              style={{ maxHeight: "10rem" }}
             >
-              <div className="space-y-1.5 pr-1">
-                {sortedHistory.map((record: PointRecord, i: number) => {
-                  const ms = Number(record.timestamp) / 1_000_000;
-                  const dateStr = format(new Date(ms), "MMM d, yyyy");
-                  const category = getAdminCategoryLabel(record.reason);
-                  return (
-                    <div
-                      key={`${record.timestamp}-${i}`}
-                      className="flex items-start justify-between gap-2 px-2.5 py-1.5 rounded-lg"
-                      style={{
-                        background: "rgba(255,106,0,0.06)",
-                        border: "1px solid rgba(255,106,0,0.12)",
-                      }}
-                      data-ocid={`admin.points_history.item.${i + 1}`}
-                    >
-                      <div className="flex flex-col gap-0.5 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span
-                            className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                            style={{
-                              background: "rgba(255,106,0,0.15)",
-                              color: "#FFA560",
-                            }}
-                          >
-                            {category}
-                          </span>
-                          <span
-                            className="text-xs"
-                            style={{ color: "#A8B6C3" }}
-                          >
-                            {dateStr}
-                          </span>
-                        </div>
-                        {record.remark && (
-                          <p
-                            className="text-xs truncate"
-                            style={{ color: "#8BA3B5" }}
-                          >
-                            {record.remark}
-                          </p>
-                        )}
-                      </div>
-                      <span
-                        className="text-sm font-bold flex-shrink-0 tabular-nums"
-                        style={{ color: "#FF6A00" }}
+              <ScrollArea
+                className="h-40 [&>[data-radix-scroll-area-scrollbar]]:opacity-100"
+                data-ocid="admin.points_history.panel"
+              >
+                <div className="space-y-1.5 pr-3">
+                  {sortedHistory.map((record: PointRecord, i: number) => {
+                    const ms = Number(record.timestamp) / 1_000_000;
+                    const dateStr = format(new Date(ms), "MMM d, yyyy");
+                    const category = getAdminCategoryLabel(record.reason);
+                    return (
+                      <div
+                        key={`${record.timestamp}-${i}`}
+                        className="flex items-start justify-between gap-2 px-2.5 py-1.5 rounded-lg"
+                        style={{
+                          background: "rgba(255,106,0,0.06)",
+                          border: "1px solid rgba(255,106,0,0.12)",
+                        }}
+                        data-ocid={`admin.points_history.item.${i + 1}`}
                       >
-                        +{Number(record.points)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
+                              style={{
+                                background: "rgba(255,106,0,0.15)",
+                                color: "#FFA560",
+                              }}
+                            >
+                              {category}
+                            </span>
+                            <span
+                              className="text-xs"
+                              style={{ color: "#A8B6C3" }}
+                            >
+                              {dateStr}
+                            </span>
+                          </div>
+                          {record.remark && (
+                            <p
+                              className="text-xs truncate"
+                              style={{ color: "#8BA3B5" }}
+                            >
+                              {record.remark}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className="text-sm font-bold flex-shrink-0 tabular-nums"
+                          style={{ color: "#FF6A00" }}
+                        >
+                          +{Number(record.points)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
           )}
         </div>
       )}
@@ -589,20 +595,13 @@ function ConversationPanel({
         (m) => m.senderRole === SenderRole.user,
       );
 
-      if (
-        hasNewUserMsg &&
-        document.hidden &&
-        typeof Notification !== "undefined" &&
-        Notification.permission === "granted"
-      ) {
+      if (hasNewUserMsg && document.hidden) {
         const displayName = profile?.name || "A client";
-        try {
-          new Notification("HN Coach", {
-            body: `New message from ${displayName}`,
-          });
-        } catch {
-          // Notifications might not be supported in all environments
-        }
+        showPushNotification(
+          "HN Coach",
+          `New message from ${displayName}`,
+          "hn-coach-admin-msg",
+        );
       }
     }
 
@@ -1206,11 +1205,6 @@ function useAdminNotificationWatcher(users: Principal[] | undefined) {
 
   const checkUnreads = useCallback(async () => {
     if (!actor || !users || users.length === 0) return;
-    if (
-      typeof Notification === "undefined" ||
-      Notification.permission !== "granted"
-    )
-      return;
 
     for (const user of users) {
       const key = user.toString();
@@ -1226,13 +1220,11 @@ function useAdminNotificationWatcher(users: Principal[] | undefined) {
         ) {
           // New unread messages arrived for this user
           if (document.hidden) {
-            try {
-              new Notification("HN Coach", {
-                body: "New message from a client",
-              });
-            } catch {
-              // ignore
-            }
+            showPushNotification(
+              "HN Coach",
+              "New message from a client",
+              "hn-coach-admin-unread",
+            );
           }
         }
         prevUnreadRef.current[key] = count;

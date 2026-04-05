@@ -142,7 +142,7 @@ actor {
     };
   };
 
-  module TimeSlot {
+  module _TimeSlot {
     public func compare(_ : Text, _ : Text) : Order.Order {
       #equal;
     };
@@ -150,16 +150,19 @@ actor {
 
   // USER PROFILES -------------------------------------------------------------
 
+  // Any authenticated Internet Identity principal can save their own profile.
+  // No role check here so new users (not yet granted #user) can onboard.
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can save profiles");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in to save profile");
     };
     profileStore.add(caller, profile);
   };
 
+  // Any authenticated Internet Identity principal can read their own profile.
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch profiles");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in to fetch profile");
     };
     profileStore.get(caller);
   };
@@ -178,8 +181,8 @@ actor {
   // CHAT MESSAGES -------------------------------------------------------------
 
   public shared ({ caller }) func sendMessageToCoach(message : Text, messageType : MessageType, blobId : ?Text) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can send messages");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in to send messages");
     };
     sendMessageInternal(caller, #user, message, messageType, blobId);
   };
@@ -211,8 +214,8 @@ actor {
   };
 
   public query ({ caller }) func getMessageHistory() : async [Message] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch message history");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in to fetch messages");
     };
     let history = switch (chatStore.get(caller)) {
       case (null) { List.empty<Message>() };
@@ -234,8 +237,8 @@ actor {
 
   // Called by the user when they open/view the chat - marks all messages as read
   public shared ({ caller }) func markMessagesAsRead() : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can mark messages as read");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in");
     };
     lastReadTimestamps.add(caller, Time.now());
   };
@@ -254,8 +257,8 @@ actor {
 
   // Returns unread count for the caller (user) - counts coach messages not yet read
   public query ({ caller }) func getCallerUnreadCount() : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch their unread count");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in");
     };
     let lastRead = switch (lastReadTimestamps.get(caller)) {
       case (null) { 0 };
@@ -313,8 +316,8 @@ actor {
   // APPOINTMENT SCHEDULING ----------------------------------------------------
 
   public shared ({ caller }) func bookAppointment(date : Text, timeSlot : Text) : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can book appointments");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in to book appointments");
     };
 
     // Validate time slot
@@ -350,8 +353,8 @@ actor {
   };
 
   public shared ({ caller }) func cancelBooking(bookingId : Nat) : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can cancel bookings");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in");
     };
 
     switch (bookingStore.get(bookingId)) {
@@ -379,8 +382,8 @@ actor {
   };
 
   public query ({ caller }) func getUserBookings() : async [Booking] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch their bookings");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in");
     };
     bookingStore.values().toArray().filter(func(b) { b.user == caller }).sort();
   };
@@ -499,16 +502,16 @@ actor {
 
   // Returns total points for the authenticated caller (user-facing).
   public query ({ caller }) func getCallerPoints() : async Nat {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch their points");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in");
     };
     getUserPointsInternal(caller);
   };
 
   // Returns full point history for the authenticated caller (user-facing).
   public query ({ caller }) func getCallerPointHistory() : async [PointRecord] {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch their point history");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in");
     };
     switch (pointsStore.get(caller)) {
       case (null) { [] };
@@ -541,8 +544,8 @@ actor {
 
   // Mark today as an active day for the caller (idempotent).
   public shared ({ caller }) func recordActivity() : async () {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can record activity");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in");
     };
     let todayNum = toDayNumber(Time.now());
     let existing = switch (streakStore.get(caller)) {
@@ -562,8 +565,8 @@ actor {
 
   // Returns streak info for the authenticated caller.
   public query ({ caller }) func getCallerStreak() : async StreakInfo {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch their streak");
+    if (caller.isAnonymous()) {
+      Runtime.trap("Unauthorized: Must be logged in");
     };
     computeStreak(caller);
   };
