@@ -11,8 +11,6 @@ import { BookPage } from "./pages/BookPage";
 import { ChatPage } from "./pages/ChatPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
-import { ProfilePage } from "./pages/ProfilePage";
-import { SignupPage } from "./pages/SignupPage";
 
 const rootRoute = createRootRoute({
   component: () => (
@@ -23,28 +21,17 @@ const rootRoute = createRootRoute({
   ),
 });
 
+// Keep /login route for direct access (Admin panel link still uses it)
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/login",
   component: LoginPage,
 });
 
-const signupRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/signup",
-  component: SignupPage,
-});
-
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: HomePage,
-});
-
-const profileRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/profile",
-  component: ProfilePage,
 });
 
 const chatRoute = createRoute({
@@ -67,9 +54,7 @@ const adminRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   loginRoute,
-  signupRoute,
   homeRoute,
-  profileRoute,
   chatRoute,
   bookRoute,
   adminRoute,

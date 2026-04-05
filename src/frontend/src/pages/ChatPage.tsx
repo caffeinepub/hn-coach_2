@@ -1,9 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
 import {
-  Bell,
-  BellOff,
   Camera,
   ChevronDown,
   ChevronUp,
@@ -14,9 +13,10 @@ import {
   MessageCircle,
   Paperclip,
   Send,
+  Sparkles,
   Star,
   Trophy,
-  X,
+  Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -25,19 +25,21 @@ import { MessageType, SenderRole } from "../backend";
 import { PointReason } from "../backend";
 import type { PointRecord } from "../backend";
 import { Footer } from "../components/Footer";
+import { LoginModal } from "../components/LoginModal";
+import { NameModal } from "../components/NameModal";
 import { NavBar } from "../components/NavBar";
-import { ProtectedRoute } from "../components/ProtectedRoute";
 import { loadConfig } from "../config";
 import { useActor } from "../hooks/useActor";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useGetCallerPointHistory,
   useGetCallerPoints,
+  useGetCallerUserProfile,
   useGetMessageHistory,
   useMarkMessagesAsRead,
   useSendMessageToCoach,
 } from "../hooks/useQueries";
 import { StorageClient } from "../utils/StorageClient";
-import { showPushNotification } from "../utils/notifications";
 
 function FileMessage({
   blobId,
@@ -58,18 +60,15 @@ function FileMessage({
       .catch(() => {});
   }, [blobId, storageClient]);
 
-  if (!url)
-    return (
-      <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#FF6A00" }} />
-    );
+  if (!url) return <Loader2 className="w-4 h-4 animate-spin text-orange-400" />;
 
   return (
     <a
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:opacity-80 transition-opacity"
-      style={{ background: "rgba(255,106,0,0.12)", color: "#FF6A00" }}
+      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:opacity-80 transition-opacity"
+      style={{ background: "rgba(255,255,255,0.2)", color: "white" }}
     >
       <FileText className="w-4 h-4 flex-shrink-0" />
       <span className="text-sm truncate max-w-[200px]">
@@ -96,17 +95,13 @@ function ImageMessage({
       .catch(() => {});
   }, [blobId, storageClient]);
 
-  if (!url)
-    return (
-      <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#FF6A00" }} />
-    );
+  if (!url) return <Loader2 className="w-4 h-4 animate-spin text-orange-400" />;
 
   return (
     <img
       src={url}
       alt="Shared file"
-      className="rounded-lg max-w-full max-h-64 object-cover"
-      style={{ border: "1px solid #F0E8DE" }}
+      className="rounded-xl max-w-full max-h-64 object-cover shadow-md"
     />
   );
 }
@@ -137,28 +132,22 @@ function getTodayPoints(history: PointRecord[]): number {
   }, 0);
 }
 
-function TodaysPointsBadge({ history }: { history: PointRecord[] }) {
-  const todayPts = getTodayPoints(history);
-  if (todayPts === 0) return null;
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.92 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full flex-shrink-0"
-      style={{
-        background: "rgba(255,106,0,0.12)",
-        border: "1.5px solid rgba(255,106,0,0.35)",
-      }}
-      data-ocid="chat.today_points.card"
-    >
-      <Star className="w-3.5 h-3.5" style={{ color: "#FF6A00" }} />
-      <span className="text-xs font-bold" style={{ color: "#FF6A00" }}>
-        Today: +{todayPts} pts
-      </span>
-    </motion.div>
-  );
-}
+const STREAK_TIERS = [
+  { days: 7, pts: 500, emoji: "🔥" },
+  { days: 14, pts: 1000, emoji: "🔥🔥" },
+  { days: 21, pts: 1500, emoji: "🔥🔥🔥" },
+  { days: 28, pts: 2000, emoji: "🔥🔥🔥🔥" },
+];
+
+const IMAGE_BONUSES = [
+  { label: "Weight Image", pts: 20, emoji: "⚖️" },
+  { label: "Footsteps", pts: 30, emoji: "👣" },
+  { label: "Meal Image", pts: 60, emoji: "🍽️" },
+  { label: "Weekly Measurements", pts: 100, emoji: "📏" },
+  { label: "Before Image", pts: 250, emoji: "📸" },
+  { label: "After Image", pts: 250, emoji: "🏆" },
+  { label: "Daily Bonus", pts: 50, emoji: "⭐" },
+];
 
 function PointsSummaryCard() {
   const { data: totalPoints, isLoading: pointsLoading } = useGetCallerPoints();
@@ -168,6 +157,7 @@ function PointsSummaryCard() {
 
   const isLoading = pointsLoading || historyLoading;
   const total = Number(totalPoints ?? BigInt(0));
+  const todayPts = history ? getTodayPoints(history) : 0;
   const sortedHistory = history
     ? [...history].sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
     : [];
@@ -176,198 +166,174 @@ function PointsSummaryCard() {
     <motion.div
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }}
-      className="rounded-xl px-4 py-3 mb-3"
+      transition={{ duration: 0.4 }}
+      className="rounded-2xl overflow-hidden mb-4"
       style={{
-        background: "#FFFFFF",
-        border: "1px solid #F0E8DE",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        background:
+          "linear-gradient(135deg, #FF6A00 0%, #FF8C3A 50%, #FFB347 100%)",
+        boxShadow: "0 8px 32px rgba(255,106,0,0.35)",
       }}
       data-ocid="chat.points.card"
     >
-      {isLoading ? (
-        <div className="flex items-center gap-2">
-          <Loader2
-            className="w-4 h-4 animate-spin"
-            style={{ color: "#FF6A00" }}
-          />
-          <span className="text-xs" style={{ color: "#8B7355" }}>
-            Loading points...
-          </span>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {/* Total + today badge row */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Trophy
-              className="w-4 h-4 flex-shrink-0"
-              style={{ color: "#FF6A00" }}
-            />
-            <span
-              className="text-sm font-semibold"
-              style={{ color: "#1A1A2E" }}
-            >
-              Total Points:
-            </span>
-            <span className="text-base font-bold" style={{ color: "#FF6A00" }}>
-              {total} pts
-            </span>
-            {history && history.length > 0 && (
-              <TodaysPointsBadge history={history} />
-            )}
-          </div>
+      {/* Decorative circles */}
+      <div
+        className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-10 translate-x-8 -translate-y-8 pointer-events-none"
+        style={{ background: "white" }}
+      />
+      <div
+        className="absolute bottom-0 left-0 w-24 h-24 rounded-full opacity-10 -translate-x-6 translate-y-6 pointer-events-none"
+        style={{ background: "white" }}
+      />
 
-          {/* Points History */}
-          {sortedHistory.length > 0 && (
-            <div>
-              <button
-                type="button"
-                onClick={() => setShowHistory((v) => !v)}
-                className="flex items-center gap-1.5 mb-2 w-full text-left hover:opacity-80 transition-opacity"
-                data-ocid="chat.points_history.toggle"
-              >
-                <History className="w-3.5 h-3.5" style={{ color: "#8B7355" }} />
-                <span
-                  className="text-xs font-semibold uppercase tracking-wider flex-1"
-                  style={{ color: "#8B7355" }}
-                >
-                  Points History
-                </span>
-                {showHistory ? (
-                  <ChevronUp
-                    className="w-3.5 h-3.5"
-                    style={{ color: "#8B7355" }}
-                  />
-                ) : (
-                  <ChevronDown
-                    className="w-3.5 h-3.5"
-                    style={{ color: "#8B7355" }}
-                  />
-                )}
-              </button>
-              {showHistory && (
-                <div
-                  className="overflow-hidden rounded-lg"
-                  style={{ maxHeight: "12rem" }}
-                >
-                  <ScrollArea
-                    className="h-48 [&>[data-radix-scroll-area-scrollbar]]:opacity-100"
-                    data-ocid="chat.points_history.panel"
-                  >
-                    <div className="space-y-1.5 pr-3">
-                      {sortedHistory.map((record, i) => {
-                        const ms = Number(record.timestamp) / 1_000_000;
-                        const dateStr = format(new Date(ms), "MMM d, yyyy");
-                        const category = getCategoryLabel(record.reason);
-                        return (
-                          <div
-                            key={`${record.timestamp}-${i}`}
-                            className="flex items-start justify-between gap-2 px-3 py-2 rounded-lg"
-                            style={{
-                              background: "rgba(255,106,0,0.06)",
-                              border: "1px solid rgba(255,106,0,0.14)",
-                            }}
-                            data-ocid={`chat.points_history.item.${i + 1}`}
-                          >
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span
-                                  className="text-xs font-semibold px-1.5 py-0.5 rounded-full"
-                                  style={{
-                                    background: "rgba(255,106,0,0.12)",
-                                    color: "#FF6A00",
-                                  }}
-                                >
-                                  {category}
-                                </span>
-                                <span
-                                  className="text-xs"
-                                  style={{ color: "#8B7355" }}
-                                >
-                                  {dateStr}
-                                </span>
-                              </div>
-                              {record.remark && (
-                                <p
-                                  className="text-xs truncate"
-                                  style={{ color: "#A89078" }}
-                                >
-                                  {record.remark}
-                                </p>
-                              )}
-                            </div>
-                            <span
-                              className="text-sm font-bold flex-shrink-0 tabular-nums"
-                              style={{ color: "#FF6A00" }}
-                            >
-                              +{Number(record.points)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
+      <div className="relative px-5 py-4">
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-white" />
+            <span className="text-sm text-white/80">Loading points...</span>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {/* Points row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Trophy className="w-5 h-5 text-white" />
                 </div>
+                <div>
+                  <p className="text-white/70 text-xs font-medium">
+                    Total Points
+                  </p>
+                  <p className="text-white text-2xl font-bold leading-none">
+                    {total.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              {todayPts > 0 && (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                  style={{ background: "rgba(255,255,255,0.25)" }}
+                >
+                  <Star className="w-3.5 h-3.5 text-white" />
+                  <span className="text-white text-xs font-bold">
+                    +{todayPts} today
+                  </span>
+                </motion.div>
               )}
             </div>
-          )}
 
-          {sortedHistory.length === 0 && !isLoading && (
-            <p className="text-xs" style={{ color: "#8B7355" }}>
-              No points yet — keep up your streak and share progress images!
-            </p>
-          )}
-        </div>
-      )}
+            {/* Points History Toggle */}
+            {sortedHistory.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowHistory((v) => !v)}
+                  className="flex items-center gap-1.5 text-white/80 hover:text-white transition-colors w-full text-left"
+                  data-ocid="chat.points_history.toggle"
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span className="text-xs font-semibold uppercase tracking-wider flex-1">
+                    Points History
+                  </span>
+                  {showHistory ? (
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  )}
+                </button>
+
+                {showHistory && (
+                  <div
+                    className="mt-2 overflow-hidden rounded-xl"
+                    style={{ maxHeight: "12rem" }}
+                  >
+                    <ScrollArea
+                      className="h-48 [&>[data-radix-scroll-area-scrollbar]]:opacity-100"
+                      data-ocid="chat.points_history.panel"
+                    >
+                      <div className="space-y-1.5 pr-2">
+                        {sortedHistory.map((record, i) => {
+                          const ms = Number(record.timestamp) / 1_000_000;
+                          const dateStr = format(new Date(ms), "MMM d, yyyy");
+                          const category = getCategoryLabel(record.reason);
+                          return (
+                            <div
+                              key={`${record.timestamp}-${i}`}
+                              className="flex items-start justify-between gap-2 px-3 py-2 rounded-lg"
+                              style={{ background: "rgba(255,255,255,0.15)" }}
+                              data-ocid={`chat.points_history.item.${i + 1}`}
+                            >
+                              <div className="flex flex-col gap-0.5 min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs font-semibold text-white">
+                                    {category}
+                                  </span>
+                                  <span className="text-xs text-white/60">
+                                    {dateStr}
+                                  </span>
+                                </div>
+                                {record.remark && (
+                                  <p className="text-xs truncate text-white/70">
+                                    {record.remark}
+                                  </p>
+                                )}
+                              </div>
+                              <span className="text-sm font-bold flex-shrink-0 text-white tabular-nums">
+                                +{Number(record.points)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {sortedHistory.length === 0 && !isLoading && (
+              <p className="text-xs text-white/70">
+                No points yet — start sharing progress to earn! 💪
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }
 
-const STREAK_TIERS = [
-  { days: 7, pts: 500 },
-  { days: 14, pts: 1000 },
-  { days: 21, pts: 1500 },
-  { days: 28, pts: 2000 },
-];
-
-const IMAGE_BONUSES = [
-  { label: "Weight Image", pts: 20 },
-  { label: "Footsteps", pts: 30 },
-  { label: "Meal Image", pts: 60 },
-  { label: "Weekly Measurements", pts: 100 },
-];
-
-const IMAGE_BONUS_EMOJIS = ["⚖️", "💟", "🍽️", "📏"];
-
 function BonusPointsGuide() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay: 0.08 }}
-      className="rounded-xl mb-5 overflow-hidden"
+      className="rounded-2xl mb-4 overflow-hidden"
       style={{
         background: "#FFFFFF",
         border: "1px solid #F0E8DE",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        boxShadow: "0 2px 12px rgba(255,106,0,0.08)",
       }}
       data-ocid="chat.bonus_guide.card"
     >
-      {/* Header / toggle */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-orange-50 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-orange-50 transition-colors"
         data-ocid="chat.bonus_guide.toggle"
       >
         <div className="flex items-center gap-2">
-          <Trophy className="w-4 h-4" style={{ color: "#FF6A00" }} />
-          <span
-            className="text-xs font-semibold tracking-wide"
-            style={{ color: "#1A1A2E" }}
+          <div
+            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            style={{ background: "linear-gradient(135deg, #FF6A00, #FF8C3A)" }}
           >
+            <Zap className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-sm font-bold" style={{ color: "#1A1A2E" }}>
             🎯 How to Earn Bonus Points
           </span>
         </div>
@@ -379,7 +345,6 @@ function BonusPointsGuide() {
         </motion.div>
       </button>
 
-      {/* Collapsible body */}
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -390,63 +355,50 @@ function BonusPointsGuide() {
             transition={{ duration: 0.25 }}
             style={{ overflow: "hidden" }}
           >
-            <div className="px-4 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="px-4 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Streak bonuses */}
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-sm">🔥</span>
                   <span
-                    className="text-xs font-semibold uppercase tracking-wider"
+                    className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: "#FF6A00" }}
                   >
                     Streak Bonuses
                   </span>
                 </div>
                 <div className="space-y-1.5">
-                  {STREAK_TIERS.map((tier, i) => {
-                    const intensity = 0.3 + i * 0.175;
-                    return (
-                      <div
-                        key={tier.days}
-                        className="flex items-center justify-between px-3 py-1.5 rounded-lg"
-                        style={{
-                          background: `rgba(255,106,0,${intensity * 0.1})`,
-                          border: `1px solid rgba(255,106,0,${intensity * 0.25})`,
-                        }}
-                        data-ocid={`chat.streak_tier.item.${i + 1}`}
-                      >
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm">
-                            {i === 0
-                              ? "🔥"
-                              : i === 1
-                                ? "🔥🔥"
-                                : i === 2
-                                  ? "🔥🔥🔥"
-                                  : "🔥🔥🔥🔥"}
-                          </span>
-                          <span
-                            className="text-xs font-medium"
-                            style={{ color: "#1A1A2E" }}
-                          >
-                            {tier.days} days
-                          </span>
-                        </div>
+                  {STREAK_TIERS.map((tier, i) => (
+                    <div
+                      key={tier.days}
+                      className="flex items-center justify-between px-3 py-2 rounded-xl"
+                      style={{
+                        background: `rgba(255,106,0,${0.04 + i * 0.03})`,
+                        border: `1.5px solid rgba(255,106,0,${0.15 + i * 0.05})`,
+                      }}
+                      data-ocid={`chat.streak_tier.item.${i + 1}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{tier.emoji}</span>
                         <span
-                          className="text-xs font-bold tabular-nums"
-                          style={{
-                            color: `rgba(255,${90 + i * 25},0,1)`,
-                          }}
+                          className="text-xs font-semibold"
+                          style={{ color: "#1A1A2E" }}
                         >
-                          +{tier.pts.toLocaleString()} pts
+                          {tier.days} days
                         </span>
                       </div>
-                    );
-                  })}
+                      <span
+                        className="text-xs font-bold"
+                        style={{ color: "#FF6A00" }}
+                      >
+                        +{tier.pts.toLocaleString()} pts
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Progress image bonuses */}
+              {/* Image bonuses */}
               <div>
                 <div className="flex items-center gap-1.5 mb-2">
                   <Camera
@@ -454,25 +406,25 @@ function BonusPointsGuide() {
                     style={{ color: "#FF6A00" }}
                   />
                   <span
-                    className="text-xs font-semibold uppercase tracking-wider"
+                    className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: "#FF6A00" }}
                   >
                     Progress Images
                   </span>
                 </div>
                 <div className="space-y-1.5">
-                  {IMAGE_BONUSES.map((bonus, i) => (
+                  {IMAGE_BONUSES.map((bonus) => (
                     <div
                       key={bonus.label}
-                      className="flex items-center justify-between px-3 py-1.5 rounded-lg"
+                      className="flex items-center justify-between px-3 py-2 rounded-xl"
                       style={{
-                        background: "rgba(255,106,0,0.06)",
+                        background: "rgba(255,106,0,0.05)",
                         border: "1px solid rgba(255,106,0,0.15)",
                       }}
-                      data-ocid={`chat.image_bonus.item.${i + 1}`}
+                      data-ocid={`chat.image_bonus.${bonus.label}`}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm">{IMAGE_BONUS_EMOJIS[i]}</span>
+                      <div className="flex items-center gap-2">
+                        <span>{bonus.emoji}</span>
                         <span
                           className="text-xs font-medium"
                           style={{ color: "#1A1A2E" }}
@@ -481,7 +433,7 @@ function BonusPointsGuide() {
                         </span>
                       </div>
                       <span
-                        className="text-xs font-bold tabular-nums"
+                        className="text-xs font-bold"
                         style={{ color: "#FF6A00" }}
                       >
                         +{bonus.pts} pts
@@ -489,15 +441,6 @@ function BonusPointsGuide() {
                     </div>
                   ))}
                 </div>
-
-                {/* Motivational note */}
-                <p
-                  className="text-xs mt-2 leading-relaxed"
-                  style={{ color: "#8B7355" }}
-                >
-                  Share your progress images with your coach to earn bonus
-                  points and track your transformation! 💪
-                </p>
               </div>
             </div>
           </motion.div>
@@ -507,78 +450,16 @@ function BonusPointsGuide() {
   );
 }
 
-// Notification permission banner for users
-function NotificationPermissionBanner() {
-  const [permState, setPermState] = useState<NotificationPermission | null>(
-    null,
-  );
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    if (typeof Notification !== "undefined") {
-      setPermState(Notification.permission);
-    }
-  }, []);
-
-  if (
-    dismissed ||
-    permState !== "default" ||
-    typeof Notification === "undefined"
-  ) {
-    return null;
-  }
-
-  const handleEnable = async () => {
-    const result = await Notification.requestPermission();
-    setPermState(result);
-    if (result === "granted") {
-      toast.success(
-        "Notifications enabled! You'll be alerted when your coach replies.",
-      );
-    }
-    setDismissed(true);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.3 }}
-      className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4"
-      style={{
-        background: "rgba(255,106,0,0.07)",
-        border: "1px solid rgba(255,106,0,0.3)",
-      }}
-      data-ocid="chat.notification_banner"
-    >
-      <Bell className="w-4 h-4 flex-shrink-0" style={{ color: "#FF6A00" }} />
-      <p className="text-sm flex-1" style={{ color: "#1A1A2E" }}>
-        Enable notifications to be alerted when your coach replies
-      </p>
-      <Button
-        size="sm"
-        onClick={handleEnable}
-        className="text-xs font-semibold flex-shrink-0 h-8 px-3"
-        style={{ background: "#FF6A00", color: "white" }}
-        data-ocid="chat.notification_enable.button"
-      >
-        Enable
-      </Button>
-      <button
-        type="button"
-        onClick={() => setDismissed(true)}
-        className="flex-shrink-0 hover:opacity-80 transition-opacity"
-        aria-label="Dismiss"
-        data-ocid="chat.notification_banner.close_button"
-      >
-        <X className="w-4 h-4" style={{ color: "#8B7355" }} />
-      </button>
-    </motion.div>
-  );
-}
-
 export function ChatPage() {
+  const navigate = useNavigate();
+  const { identity } = useInternetIdentity();
+  const { data: profile, isFetched: profileFetched } =
+    useGetCallerUserProfile();
+  const isAnonymous = !identity || identity.getPrincipal().isAnonymous();
+  const hasName = !!profile?.name?.trim();
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
+
   const { data: messages, isLoading } = useGetMessageHistory();
   const sendMessage = useSendMessageToCoach();
   const markAsRead = useMarkMessagesAsRead();
@@ -594,9 +475,6 @@ export function ChatPage() {
   const hasMarkedRef = useRef(false);
   const markAsReadRef = useRef(markAsRead.mutate);
   markAsReadRef.current = markAsRead.mutate;
-
-  // Track previous message count for push notifications
-  const prevMessageCountRef = useRef<number>(0);
 
   useEffect(() => {
     if (!actor || isFetching) return;
@@ -618,7 +496,6 @@ export function ChatPage() {
     });
   }, [actor, isFetching]);
 
-  // Mark messages as read once when messages first load
   useEffect(() => {
     if (messages && messages.length > 0 && !hasMarkedRef.current) {
       hasMarkedRef.current = true;
@@ -626,31 +503,15 @@ export function ChatPage() {
     }
   }, [messages]);
 
-  // Browser push notifications when new coach messages arrive while tab is hidden
+  // Show login modal if anonymous
   useEffect(() => {
-    if (!messages) return;
+    if (isAnonymous) setShowLoginModal(true);
+  }, [isAnonymous]);
 
-    const currentCount = messages.length;
-    const prevCount = prevMessageCountRef.current;
-
-    if (currentCount > prevCount && prevCount > 0) {
-      // Check if new messages were sent by coach
-      const newMessages = messages.slice(prevCount);
-      const hasNewCoachMsg = newMessages.some(
-        (m) => m.senderRole === SenderRole.coach,
-      );
-
-      if (hasNewCoachMsg && document.hidden) {
-        showPushNotification(
-          "HN Coach",
-          "You have a new message from your coach!",
-          "hn-coach-user-msg",
-        );
-      }
-    }
-
-    prevMessageCountRef.current = currentCount;
-  }, [messages]);
+  // Show name modal after login if name not set
+  useEffect(() => {
+    if (!isAnonymous && profileFetched && !hasName) setShowNameModal(true);
+  }, [isAnonymous, profileFetched, hasName]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -665,7 +526,6 @@ export function ChatPage() {
   ) => {
     const text = messageText ?? input.trim();
     if (!text && !blobId) return;
-
     if (!messageText) setInput("");
     try {
       await sendMessage.mutateAsync({
@@ -687,14 +547,12 @@ export function ChatPage() {
       toast.error("Storage not ready, please try again");
       return;
     }
-
     const isPdf = file.type === "application/pdf";
     const isImage = file.type.startsWith("image/");
     if (!isPdf && !isImage) {
       toast.error("Only images and PDFs are supported");
       return;
     }
-
     setIsUploading(true);
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -754,14 +612,14 @@ export function ChatPage() {
   const hasMessages = messages && messages.length > 0;
 
   return (
-    <ProtectedRoute>
+    <>
       <div
         className="min-h-screen flex flex-col"
         style={{ background: "#FFFBF5" }}
       >
         <NavBar />
 
-        <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 flex flex-col">
+        <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -771,97 +629,165 @@ export function ChatPage() {
             {/* Header */}
             <div className="flex items-center gap-3 mb-5">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(255,106,0,0.1)" }}
+                className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                style={{
+                  background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                  boxShadow: "0 4px 16px rgba(255,106,0,0.3)",
+                }}
               >
-                <MessageCircle
-                  className="w-5 h-5"
-                  style={{ color: "#FF6A00" }}
-                />
+                <MessageCircle className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1
-                  className="text-xl font-display font-bold"
-                  style={{ color: "#1A1A2E" }}
-                >
+                <h1 className="text-xl font-bold" style={{ color: "#1A1A2E" }}>
                   Chat with your Coach
                 </h1>
-                <p className="text-sm" style={{ color: "#8B7355" }}>
-                  Your messages are private and secure
-                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <p className="text-xs" style={{ color: "#8B7355" }}>
+                    Coach online · Responds 8am–11:59pm
+                  </p>
+                </div>
               </div>
-              <div className="ml-auto flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-green-400" />
-                <span className="text-xs" style={{ color: "#8B7355" }}>
-                  Coach online
-                </span>
+              <div className="ml-auto">
+                <div
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                  style={{
+                    background: "rgba(255,106,0,0.1)",
+                    border: "1px solid rgba(255,106,0,0.2)",
+                  }}
+                >
+                  <Sparkles
+                    className="w-3.5 h-3.5"
+                    style={{ color: "#FF6A00" }}
+                  />
+                  <span
+                    className="text-xs font-semibold"
+                    style={{ color: "#FF6A00" }}
+                  >
+                    Private &amp; Secure
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Notification permission banner */}
-            <AnimatePresence>
-              <NotificationPermissionBanner />
-            </AnimatePresence>
-
             {/* Points summary card */}
-            <PointsSummaryCard />
+            <div className="relative">
+              <PointsSummaryCard />
+            </div>
 
             {/* Bonus points guide */}
             <BonusPointsGuide />
 
             {/* Chat container */}
             <div
-              className="flex-1 flex flex-col rounded-2xl border overflow-hidden"
+              className="flex-1 flex flex-col rounded-3xl overflow-hidden"
               style={{
                 background: "#FFFFFF",
-                borderColor: "#F0E8DE",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
-                minHeight: "500px",
+                border: "1px solid #F0E8DE",
+                boxShadow: "0 8px 40px rgba(0,0,0,0.08)",
+                minHeight: "460px",
               }}
             >
+              {/* Chat header bar */}
+              <div
+                className="flex items-center gap-3 px-5 py-3.5"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #FF6A00 0%, #FF8C3A 100%)",
+                }}
+              >
+                <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+                  <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-white font-bold text-sm">HN Coach</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-300 animate-pulse" />
+                    <p className="text-white/80 text-xs">Online</p>
+                  </div>
+                </div>
+                <div className="ml-auto flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-white/70" />
+                  <span className="text-white/80 text-xs">8am – 11:59pm</span>
+                </div>
+              </div>
+
               {/* Messages area */}
               <div
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4"
-                style={{ maxHeight: "calc(100vh - 380px)" }}
+                className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-1"
+                style={{
+                  maxHeight: "calc(100vh - 420px)",
+                  background:
+                    "linear-gradient(180deg, #FFFBF5 0%, #FFFFFF 100%)",
+                }}
                 data-ocid="chat.panel"
               >
                 {isLoading ? (
                   <div className="flex items-center justify-center h-32">
-                    <Loader2
-                      className="w-6 h-6 animate-spin"
-                      style={{ color: "#FF6A00" }}
-                      data-ocid="chat.loading_state"
-                    />
+                    <div className="flex flex-col items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center"
+                        style={{ background: "rgba(255,106,0,0.1)" }}
+                      >
+                        <Loader2
+                          className="w-5 h-5 animate-spin"
+                          style={{ color: "#FF6A00" }}
+                        />
+                      </div>
+                      <p className="text-sm" style={{ color: "#8B7355" }}>
+                        Loading messages...
+                      </p>
+                    </div>
                   </div>
                 ) : !hasMessages ? (
                   <div
                     className="flex flex-col items-center justify-center h-48 text-center"
                     data-ocid="chat.empty_state"
                   >
-                    <MessageCircle
-                      className="w-12 h-12 mb-3 opacity-20"
-                      style={{ color: "#FF6A00" }}
-                    />
-                    <p className="font-medium" style={{ color: "#1A1A2E" }}>
-                      No messages yet
+                    <motion.div
+                      animate={{ scale: [1, 1.08, 1] }}
+                      transition={{
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "easeInOut",
+                      }}
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, rgba(255,106,0,0.12), rgba(255,140,58,0.12))",
+                      }}
+                    >
+                      <MessageCircle
+                        className="w-8 h-8"
+                        style={{ color: "#FF6A00" }}
+                      />
+                    </motion.div>
+                    <p
+                      className="font-bold text-base"
+                      style={{ color: "#1A1A2E" }}
+                    >
+                      Start the conversation!
                     </p>
                     <p className="text-sm mt-1" style={{ color: "#8B7355" }}>
-                      Say hello to your coach!
+                      Your coach is ready for you 💪
                     </p>
                   </div>
                 ) : (
                   <AnimatePresence initial={false}>
                     {groupedMessages.map((group) => (
                       <div key={group.date}>
-                        <div className="flex items-center gap-3 my-4">
+                        <div className="flex items-center gap-3 my-5">
                           <div
                             className="flex-1 border-t"
                             style={{ borderColor: "#F0E8DE" }}
                           />
                           <span
-                            className="text-xs px-2"
-                            style={{ color: "#A89078" }}
+                            className="text-xs px-3 py-1 rounded-full font-medium"
+                            style={{
+                              background: "rgba(255,106,0,0.08)",
+                              color: "#FF6A00",
+                            }}
                           >
                             {group.date}
                           </span>
@@ -872,43 +798,81 @@ export function ChatPage() {
                         </div>
                         {group.messages?.map((msg, i) => {
                           const isUser = msg.senderRole === SenderRole.user;
+                          const isSystem =
+                            msg.senderRole === SenderRole.coach &&
+                            msg.message.startsWith("You earned");
+
+                          if (isSystem) {
+                            return (
+                              <motion.div
+                                key={`${msg.timestamp}-${i}`}
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ duration: 0.3 }}
+                                className="flex justify-center mb-3"
+                              >
+                                <div
+                                  className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold"
+                                  style={{
+                                    background:
+                                      "linear-gradient(135deg, rgba(255,106,0,0.12), rgba(255,179,71,0.15))",
+                                    border: "1.5px solid rgba(255,106,0,0.3)",
+                                    color: "#FF6A00",
+                                  }}
+                                >
+                                  <Star className="w-4 h-4" />
+                                  <span>{msg.message}</span>
+                                </div>
+                              </motion.div>
+                            );
+                          }
+
                           return (
                             <motion.div
                               key={`${msg.timestamp}-${i}`}
-                              initial={{ opacity: 0, y: 8 }}
-                              animate={{ opacity: 1, y: 0 }}
+                              initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
                               transition={{ duration: 0.25 }}
                               className={`flex mb-3 ${
                                 isUser ? "justify-end" : "justify-start"
                               }`}
                             >
+                              {/* Coach avatar */}
+                              {!isUser && (
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center mr-2 flex-shrink-0 self-end mb-5"
+                                  style={{
+                                    background:
+                                      "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                                  }}
+                                >
+                                  <span className="text-white text-xs font-bold">
+                                    HN
+                                  </span>
+                                </div>
+                              )}
+
                               <div
-                                className={`max-w-[80%] sm:max-w-[65%] ${
+                                className={`max-w-[78%] sm:max-w-[62%] ${
                                   isUser ? "items-end" : "items-start"
                                 } flex flex-col`}
                               >
-                                {!isUser && (
-                                  <span
-                                    className="text-xs mb-1 font-medium"
-                                    style={{ color: "#FF6A00" }}
-                                  >
-                                    HN Coach
-                                  </span>
-                                )}
                                 <div
-                                  className="px-4 py-3 rounded-2xl text-sm leading-relaxed"
+                                  className="px-4 py-3 text-sm leading-relaxed"
                                   style={{
-                                    background: isUser ? "#FF6A00" : "#F8F3EE",
+                                    background: isUser
+                                      ? "linear-gradient(135deg, #FF6A00, #FF8C3A)"
+                                      : "#F8F3EE",
                                     color: isUser ? "#FFFFFF" : "#1A1A2E",
                                     border: isUser
                                       ? "none"
-                                      : "1px solid #F0E8DE",
-                                    borderBottomRightRadius: isUser
-                                      ? "4px"
-                                      : undefined,
-                                    borderBottomLeftRadius: !isUser
-                                      ? "4px"
-                                      : undefined,
+                                      : "1px solid #EDE4D9",
+                                    borderRadius: isUser
+                                      ? "20px 20px 6px 20px"
+                                      : "20px 20px 20px 6px",
+                                    boxShadow: isUser
+                                      ? "0 4px 16px rgba(255,106,0,0.25)"
+                                      : "0 2px 8px rgba(0,0,0,0.05)",
                                   }}
                                 >
                                   {msg.messageType === MessageType.image &&
@@ -935,6 +899,21 @@ export function ChatPage() {
                                   {formatTime(msg.timestamp)}
                                 </span>
                               </div>
+
+                              {/* User avatar */}
+                              {isUser && (
+                                <div
+                                  className="w-8 h-8 rounded-full flex items-center justify-center ml-2 flex-shrink-0 self-end mb-5"
+                                  style={{ background: "rgba(255,106,0,0.15)" }}
+                                >
+                                  <span
+                                    className="text-xs font-bold"
+                                    style={{ color: "#FF6A00" }}
+                                  >
+                                    Me
+                                  </span>
+                                </div>
+                              )}
                             </motion.div>
                           );
                         })}
@@ -944,49 +923,29 @@ export function ChatPage() {
                 )}
               </div>
 
-              {/* Response time notice banner */}
-              <div
-                className="mx-3 mb-2 mt-1 flex items-center gap-2 px-3 py-2 rounded-xl"
-                style={{
-                  background: "rgba(255, 106, 0, 0.07)",
-                  border: "1px solid rgba(255, 106, 0, 0.2)",
-                }}
-              >
-                <Clock
-                  className="w-3.5 h-3.5 flex-shrink-0"
-                  style={{ color: "#FF8C38" }}
-                />
-                <p className="text-xs font-medium" style={{ color: "#FF6A00" }}>
-                  We will respond shortly{" "}
-                  <span style={{ color: "#c45200" }}>
-                    (Morning 8am to 11:59pm)
-                  </span>
-                </p>
-              </div>
-
               {/* Input area */}
               <div
                 className="border-t p-4"
-                style={{ background: "#FFFBF5", borderColor: "#F0E8DE" }}
+                style={{ background: "#FFFFFF", borderColor: "#F0E8DE" }}
               >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  data-ocid="chat.upload_button"
+                />
                 <div className="flex items-end gap-2">
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,application/pdf"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    data-ocid="chat.upload_button"
-                  />
-                  {/* Attach button */}
                   <Button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading || !storageClient}
-                    className="w-11 h-11 p-0 rounded-xl flex items-center justify-center flex-shrink-0"
+                    className="w-11 h-11 p-0 rounded-xl flex items-center justify-center flex-shrink-0 transition-all"
                     style={{
-                      background: "#F0E8DE",
+                      background: isUploading
+                        ? "rgba(255,106,0,0.1)"
+                        : "#F8F3EE",
                       border: "1px solid #EDE4D9",
                       color: isUploading ? "#FF6A00" : "#8B7355",
                     }}
@@ -998,41 +957,58 @@ export function ChatPage() {
                       <Paperclip className="w-4 h-4" />
                     )}
                   </Button>
+
                   <textarea
                     ref={textareaRef}
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type your message... (Enter to send)"
+                    placeholder="Type your message..."
                     rows={1}
-                    className="flex-1 rounded-xl px-4 py-3 text-sm resize-none outline-none border focus:border-orange-400 transition-colors min-h-[44px] max-h-32 overflow-y-auto"
+                    className="flex-1 rounded-2xl px-4 py-3 text-sm resize-none outline-none border transition-all min-h-[44px] max-h-32 overflow-y-auto"
                     style={{
-                      background: "#FFFFFF",
-                      borderColor: "#EDE4D9",
+                      background: "#F8F3EE",
+                      borderColor: input ? "#FF6A00" : "#EDE4D9",
                       color: "#1A1A2E",
+                      boxShadow: input
+                        ? "0 0 0 3px rgba(255,106,0,0.1)"
+                        : "none",
                     }}
                     data-ocid="chat.input"
                   />
-                  <Button
-                    onClick={() => handleSend()}
-                    disabled={!input.trim() || sendMessage.isPending}
-                    className="w-11 h-11 p-0 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
-                    style={{
-                      background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
-                      boxShadow: "0 4px 12px rgba(255,106,0,0.3)",
-                    }}
-                    data-ocid="chat.submit_button"
+
+                  <motion.div
+                    whileTap={{ scale: 0.92 }}
+                    whileHover={{ scale: 1.05 }}
                   >
-                    {sendMessage.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </Button>
+                    <Button
+                      onClick={() => handleSend()}
+                      disabled={!input.trim() || sendMessage.isPending}
+                      className="w-11 h-11 p-0 rounded-xl flex items-center justify-center flex-shrink-0 text-white transition-all"
+                      style={{
+                        background: input.trim()
+                          ? "linear-gradient(135deg, #FF6A00, #FF8C3A)"
+                          : "#E8E0D8",
+                        boxShadow: input.trim()
+                          ? "0 4px 16px rgba(255,106,0,0.35)"
+                          : "none",
+                      }}
+                      data-ocid="chat.submit_button"
+                    >
+                      {sendMessage.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </motion.div>
                 </div>
-                <p className="text-xs mt-2" style={{ color: "#A89078" }}>
-                  Press Enter to send &bull; Shift+Enter for new line &bull;
-                  Attach images or PDFs with the paperclip
+                <p
+                  className="text-xs mt-2 text-center"
+                  style={{ color: "#C4B8A8" }}
+                >
+                  Enter to send · Shift+Enter for new line · Attach images or
+                  PDFs
                 </p>
               </div>
             </div>
@@ -1041,6 +1017,22 @@ export function ChatPage() {
 
         <Footer />
       </div>
-    </ProtectedRoute>
+
+      {/* Login modal — shown when anonymous */}
+      <LoginModal
+        open={showLoginModal}
+        onOpenChange={(open) => {
+          setShowLoginModal(open);
+          if (!open && isAnonymous) navigate({ to: "/" });
+        }}
+        reason="Sign in to chat with your coach."
+      />
+
+      {/* Name modal — shown after login if name not yet set */}
+      <NameModal
+        open={showNameModal}
+        onComplete={() => setShowNameModal(false)}
+      />
+    </>
   );
 }

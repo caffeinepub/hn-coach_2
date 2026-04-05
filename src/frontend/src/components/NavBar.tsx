@@ -12,10 +12,12 @@ export function NavBar() {
   const navigate = useNavigate();
   const { data: profile } = useGetCallerUserProfile();
 
+  const isAnonymous = !identity || identity.getPrincipal().isAnonymous();
+
   const handleLogout = async () => {
     await clear();
     queryClient.clear();
-    navigate({ to: "/login" });
+    navigate({ to: "/" });
   };
 
   const avatarUrl = profile?.avatarBlobId || undefined;
@@ -26,7 +28,7 @@ export function NavBar() {
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : identity?.getPrincipal().toString().slice(0, 2).toUpperCase() || "U";
+    : "U";
 
   return (
     <header
@@ -64,50 +66,54 @@ export function NavBar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Avatar — display only, no profile link */}
-            <div className="flex items-center gap-2">
-              <Avatar
-                className="w-8 h-8 border-2"
-                style={{ borderColor: "#FF6A00" }}
-              >
-                {avatarUrl && (
-                  <AvatarImage
-                    src={avatarUrl}
-                    alt={profile?.name || "Avatar"}
-                  />
-                )}
-                <AvatarFallback
-                  className="text-xs font-bold text-white"
-                  style={{ background: "#FF6A00" }}
-                >
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              {profile?.name && (
-                <span
-                  className="hidden sm:block text-sm font-medium"
-                  style={{ color: "#1A1A2E" }}
-                >
-                  {profile.name}
-                </span>
-              )}
-            </div>
+            {!isAnonymous && (
+              <>
+                {/* Avatar */}
+                <div className="flex items-center gap-2">
+                  <Avatar
+                    className="w-8 h-8 border-2"
+                    style={{ borderColor: "#FF6A00" }}
+                  >
+                    {avatarUrl && (
+                      <AvatarImage
+                        src={avatarUrl}
+                        alt={profile?.name || "Avatar"}
+                      />
+                    )}
+                    <AvatarFallback
+                      className="text-xs font-bold text-white"
+                      style={{ background: "#FF6A00" }}
+                    >
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  {profile?.name && (
+                    <span
+                      className="hidden sm:block text-sm font-medium"
+                      style={{ color: "#1A1A2E" }}
+                    >
+                      {profile.name}
+                    </span>
+                  )}
+                </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className="font-semibold text-xs uppercase tracking-wide"
-              style={{
-                borderColor: "#FF6A00",
-                color: "#FF6A00",
-                background: "transparent",
-              }}
-              data-ocid="nav.logout.button"
-            >
-              <LogOut className="w-3.5 h-3.5 mr-1.5" />
-              Log Out
-            </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="font-semibold text-xs uppercase tracking-wide"
+                  style={{
+                    borderColor: "#FF6A00",
+                    color: "#FF6A00",
+                    background: "transparent",
+                  }}
+                  data-ocid="nav.logout.button"
+                >
+                  <LogOut className="w-3.5 h-3.5 mr-1.5" />
+                  Log Out
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

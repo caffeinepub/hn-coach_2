@@ -1,7 +1,9 @@
-import { Dumbbell } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { Dumbbell, ShieldCheck } from "lucide-react";
 
 export function Footer() {
   const year = new Date().getFullYear();
+  const navigate = useNavigate();
   const hostname =
     typeof window !== "undefined" ? window.location.hostname : "";
   const caffeineUrl = `https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(hostname)}`;
@@ -29,19 +31,33 @@ export function Footer() {
               HN<span style={{ color: "#FF6A00" }}> Coach</span>
             </span>
           </div>
-          <p className="text-sm" style={{ color: "#8B7355" }}>
-            &copy; {year}. Built with{" "}
-            <span style={{ color: "#FF6A00" }}>♥</span> using{" "}
-            <a
-              href={caffeineUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:underline"
-              style={{ color: "#FF6A00" }}
+
+          <div className="flex items-center gap-4">
+            {/* Admin panel link — subtle, for coaches only */}
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/admin" })}
+              className="flex items-center gap-1.5 text-xs hover:underline transition-colors"
+              style={{ color: "#B0A090" }}
             >
-              caffeine.ai
-            </a>
-          </p>
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Coach Admin
+            </button>
+
+            <p className="text-sm" style={{ color: "#8B7355" }}>
+              &copy; {year}. Built with{" "}
+              <span style={{ color: "#FF6A00" }}>♥</span> using{" "}
+              <a
+                href={caffeineUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+                style={{ color: "#FF6A00" }}
+              >
+                caffeine.ai
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </footer>
