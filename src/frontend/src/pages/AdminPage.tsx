@@ -65,7 +65,6 @@ import { StorageClient } from "../utils/StorageClient";
 import { showPushNotification } from "../utils/notifications";
 
 const ADMIN_PASSWORD = "hncoach2024";
-const ADMIN_AUTH_KEY = "hncoach_admin_auth";
 
 function AdminFileMessage({
   blobId,
@@ -346,7 +345,7 @@ function PointsBar({
 
   return (
     <div
-      className="border-b"
+      className="border-b flex-shrink-0"
       style={{
         background: "rgba(255,106,0,0.04)",
         borderColor: "rgba(255,106,0,0.2)",
@@ -642,12 +641,13 @@ function ConversationPanel({
   // Track previous message count for push notifications
   const prevMessageCountRef = useRef<number>(0);
 
+  // Auto-scroll to bottom whenever messages update
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollRef is a stable ref, messages drives scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [messages]);
 
   // Browser push notifications when new user messages arrive
   useEffect(() => {
@@ -789,7 +789,7 @@ function ConversationPanel({
 
   return (
     <div
-      className="flex-1 flex flex-col h-full"
+      className="flex-1 flex flex-col h-full overflow-hidden"
       style={{ background: "#112A3A" }}
     >
       {/* Conversation header */}
@@ -1022,7 +1022,10 @@ function ConversationPanel({
   );
 }
 
-function BookingsTab({ actor }: { actor: backendInterface | null }) {
+function BookingsTab({
+  actor,
+  actorLoading = false,
+}: { actor: backendInterface | null; actorLoading?: boolean }) {
   const { data: bookings, isLoading } = useAdminGetAllBookings(actor);
   const cancelBooking = useAdminCancelBookingMutation(actor);
 
@@ -1044,7 +1047,7 @@ function BookingsTab({ actor }: { actor: backendInterface | null }) {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || actorLoading || !actor) {
     return (
       <div
         className="flex items-center justify-center py-16"
@@ -1338,11 +1341,14 @@ function useAdminNotificationWatcher(
 function MessagesTab({
   storageClient,
   actor,
+  actorLoading = false,
 }: {
   storageClient: StorageClient | null;
   actor: backendInterface | null;
+  actorLoading?: boolean;
 }) {
   const { data: users, isLoading: usersLoading } = useAdminGetAllUsers(actor);
+  const isUserListLoading = actorLoading || (!actor && !users) || usersLoading;
   const [selectedUser, setSelectedUser] = useState<Principal | null>(null);
   const markCoachRead = useAdminMarkCoachReadForUser(actor);
   // Global notification watcher - fires for any user, even when not in their conversation
@@ -1395,7 +1401,7 @@ function MessagesTab({
           </div>
           <ScrollArea className="flex-1">
             <div className="p-2 space-y-1">
-              {usersLoading ? (
+              {isUserListLoading ? (
                 <div
                   className="flex justify-center py-8"
                   data-ocid="admin.users.loading_state"
@@ -1454,7 +1460,6 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
     setIsChecking(true);
     setTimeout(() => {
       if (password === ADMIN_PASSWORD) {
-        localStorage.setItem(ADMIN_AUTH_KEY, "true");
         onAuth();
       } else {
         setError("Incorrect password. Try again.");
@@ -1596,7 +1601,7 @@ function PasswordGate({ onAuth }: { onAuth: () => void }) {
 }
 
 function AdminPanel() {
-  const { actor } = useAdminActor();
+  const { actor, isLoading: actorLoading } = useAdminActor();
   const [storageClient, setStorageClient] = useState<StorageClient | null>(
     null,
   );
@@ -1656,7 +1661,6 @@ function AdminPanel() {
             <button
               type="button"
               onClick={() => {
-                localStorage.removeItem(ADMIN_AUTH_KEY);
                 window.location.reload();
               }}
               className="text-sm font-medium px-3 sm:px-4 py-2 rounded-lg transition-colors hover:opacity-80 min-h-[40px] flex items-center gap-1.5"
@@ -1715,11 +1719,15 @@ function AdminPanel() {
             </TabsList>
 
             <TabsContent value="messages">
-              <MessagesTab storageClient={storageClient} actor={actor} />
+              <MessagesTab
+                storageClient={storageClient}
+                actor={actor}
+                actorLoading={actorLoading}
+              />
             </TabsContent>
 
             <TabsContent value="bookings">
-              <BookingsTab actor={actor} />
+              <BookingsTab actor={actor} actorLoading={actorLoading} />
             </TabsContent>
           </Tabs>
         </motion.div>
@@ -1740,9 +1748,8 @@ function AdminPanel() {
 }
 
 export function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem(ADMIN_AUTH_KEY) === "true";
-  });
+  // Always ask for password — no localStorage persistence
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   if (!isAuthenticated) {
     return <PasswordGate onAuth={() => setIsAuthenticated(true)} />;

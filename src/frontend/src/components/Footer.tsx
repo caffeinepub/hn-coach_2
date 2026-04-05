@@ -1,9 +1,7 @@
-import { useNavigate } from "@tanstack/react-router";
-import { Dumbbell, ShieldCheck } from "lucide-react";
+import { Dumbbell } from "lucide-react";
 
 export function Footer() {
   const year = new Date().getFullYear();
-  const navigate = useNavigate();
 
   return (
     <footer
@@ -30,16 +28,6 @@ export function Footer() {
           </div>
 
           <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/admin" })}
-              className="flex items-center gap-1.5 text-xs hover:underline transition-colors"
-              style={{ color: "#B0A090" }}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              Coach Admin
-            </button>
-
             <p className="text-sm" style={{ color: "#8B7355" }}>
               &copy; {year} HN Coach. All rights reserved.
             </p>

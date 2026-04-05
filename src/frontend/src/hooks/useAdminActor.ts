@@ -9,15 +9,33 @@ import { createActorWithConfig } from "../config";
  */
 export function useAdminActor() {
   const [actor, setActor] = useState<backendInterface | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const initialized = useRef(false);
 
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
+    setIsLoading(true);
     createActorWithConfig()
-      .then((a) => setActor(a))
-      .catch((err) => console.error("Failed to create admin actor:", err));
+      .then((a) => {
+        setActor(a);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to create admin actor:", err);
+        // Retry once after 2 seconds
+        setTimeout(() => {
+          createActorWithConfig()
+            .then((a) => {
+              setActor(a);
+            })
+            .catch((e) => {
+              console.error("Admin actor retry also failed:", e);
+            })
+            .finally(() => setIsLoading(false));
+        }, 2000);
+      });
   }, []);
 
-  return { actor, isReady: !!actor };
+  return { actor, isReady: !!actor, isLoading };
 }
