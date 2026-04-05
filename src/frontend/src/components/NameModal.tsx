@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Save, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { UserProfile } from "../backend";
 import { useActor } from "../hooks/useActor";
@@ -22,10 +22,19 @@ interface NameModalProps {
 
 export function NameModal({ open, onComplete }: NameModalProps) {
   const queryClient = useQueryClient();
-  const { actor } = useActor();
+  const { actor, isFetching } = useActor();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setError("");
+      setIsSaving(false);
+    }
+  }, [open]);
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -33,7 +42,7 @@ export function NameModal({ open, onComplete }: NameModalProps) {
       return;
     }
     if (!actor) {
-      toast.error("Not connected yet. Please wait a moment and try again.");
+      toast.error("Still connecting. Please wait a moment and try again.");
       return;
     }
     setError("");
@@ -47,12 +56,10 @@ export function NameModal({ open, onComplete }: NameModalProps) {
       weight: "",
       height: "",
       targetGoal: "",
-      // avatarBlobId omitted = undefined, which the bindgen converts to []
     };
 
     try {
       await actor.saveCallerUserProfile(profileData);
-      // Update cache immediately so HomePage/ProtectedRoute sees the complete profile
       queryClient.setQueryData(["currentUserProfile"], profileData);
       toast.success("Welcome to HN Coach!");
       onComplete();
@@ -63,6 +70,9 @@ export function NameModal({ open, onComplete }: NameModalProps) {
       setIsSaving(false);
     }
   };
+
+  const isConnecting = isFetching && !actor;
+  const buttonDisabled = isSaving || isConnecting;
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
@@ -125,7 +135,9 @@ export function NameModal({ open, onComplete }: NameModalProps) {
                 setName(e.target.value);
                 if (error) setError("");
               }}
-              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              onKeyDown={(e) =>
+                e.key === "Enter" && !buttonDisabled && handleSave()
+              }
               placeholder="Your full name"
               className="h-11 rounded-xl"
               style={{
@@ -144,17 +156,26 @@ export function NameModal({ open, onComplete }: NameModalProps) {
 
           <Button
             onClick={handleSave}
-            disabled={isSaving || !actor}
+            disabled={buttonDisabled}
             className="w-full h-11 font-semibold text-white rounded-xl"
             style={{
-              background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
-              boxShadow: "0 4px 16px rgba(255,106,0,0.3)",
+              background: buttonDisabled
+                ? "#ccc"
+                : "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+              boxShadow: buttonDisabled
+                ? "none"
+                : "0 4px 16px rgba(255,106,0,0.3)",
             }}
           >
             {isSaving ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Saving...
+              </>
+            ) : isConnecting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Connecting...
               </>
             ) : (
               <>

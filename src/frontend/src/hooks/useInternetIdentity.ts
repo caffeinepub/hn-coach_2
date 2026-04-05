@@ -87,15 +87,8 @@ export function InternetIdentityProvider({
   children: ReactNode;
   createOptions?: AuthClientCreateOptions;
 }>) {
-  // Store auth client in a ref so state changes never trigger re-initialization.
-  // This is the permanent fix for the infinite auth loop / white page issue.
   const authClientRef = useRef<AuthClient | null>(null);
-  const initStarted = useRef(false);
-  // Store createOptions in a ref so it's always fresh inside callbacks
-  // without needing to add it to dependency arrays.
-  const createOptionsRef = useRef(createOptions);
-  createOptionsRef.current = createOptions;
-
+  const initStartedRef = useRef(false);
   const [identity, setIdentity] = useState<Identity | undefined>(undefined);
   const [loginStatus, setStatus] = useState<Status>("initializing");
   const [loginError, setError] = useState<Error | undefined>(undefined);
@@ -105,46 +98,38 @@ export function InternetIdentityProvider({
     setError(new Error(message));
   }, []);
 
-  // Initialize exactly once on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally runs once on mount
   useEffect(() => {
-    if (initStarted.current) return;
-    initStarted.current = true;
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
 
-    let cancelled = false;
     void (async () => {
       try {
         setStatus("initializing");
-        const client = await createAuthClient(createOptionsRef.current);
-        if (cancelled) return;
+        const client = await createAuthClient(createOptions);
         authClientRef.current = client;
         const isAuthenticated = await client.isAuthenticated();
-        if (cancelled) return;
         if (isAuthenticated) {
           setIdentity(client.getIdentity());
         }
       } catch (unknownError) {
-        if (!cancelled) {
-          setStatus("loginError");
-          setError(
-            unknownError instanceof Error
-              ? unknownError
-              : new Error("Initialization failed"),
-          );
-        }
+        setStatus("loginError");
+        setError(
+          unknownError instanceof Error
+            ? unknownError
+            : new Error("Initialization failed"),
+        );
       } finally {
-        if (!cancelled) setStatus("idle");
+        setStatus("idle");
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const handleLoginSuccess = useCallback(() => {
     const client = authClientRef.current;
     if (!client) return;
-    setIdentity(client.getIdentity());
+    const latestIdentity = client.getIdentity();
+    setIdentity(latestIdentity);
     setStatus("success");
   }, []);
 
@@ -159,7 +144,7 @@ export function InternetIdentityProvider({
     const client = authClientRef.current;
     if (!client) {
       setErrorMessage(
-        "AuthClient is not initialized yet. Please try again in a moment.",
+        "AuthClient is not initialized yet, please try again in a moment.",
       );
       return;
     }
@@ -168,7 +153,7 @@ export function InternetIdentityProvider({
       identityProvider: DEFAULT_IDENTITY_PROVIDER,
       onSuccess: handleLoginSuccess,
       onError: handleLoginError,
-      maxTimeToLive: ONE_HOUR_IN_NANOSECONDS * BigInt(24 * 30), // 30 days
+      maxTimeToLive: ONE_HOUR_IN_NANOSECONDS * BigInt(24 * 30),
     };
 
     setStatus("logging-in");
@@ -183,20 +168,10 @@ export function InternetIdentityProvider({
       .logout()
       .then(() => {
         authClientRef.current = null;
-        initStarted.current = false;
+        initStartedRef.current = false;
         setIdentity(undefined);
         setStatus("idle");
         setError(undefined);
-
-        // Re-initialize a fresh client after logout
-        void (async () => {
-          try {
-            const newClient = await createAuthClient(createOptionsRef.current);
-            authClientRef.current = newClient;
-          } catch {
-            // ignore
-          }
-        })();
       })
       .catch((unknownError: unknown) => {
         setStatus("loginError");
