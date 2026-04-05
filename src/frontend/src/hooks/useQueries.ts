@@ -41,7 +41,6 @@ export function useSaveUserProfile() {
       await actor.saveCallerUserProfile(profile);
     },
     onSuccess: (_data, profile) => {
-      // Update cache immediately so ProtectedRoute sees a complete profile
       queryClient.setQueryData(["currentUserProfile"], profile);
     },
     onError: (err) => {
@@ -88,6 +87,9 @@ export function useSendMessageToCoach() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["messageHistory"] });
+    },
+    onError: (err) => {
+      console.error("sendMessageToCoach error:", err);
     },
   });
 }
@@ -231,6 +233,9 @@ export function useSendMessageToUser() {
       queryClient.invalidateQueries({
         queryKey: ["userMessageHistory", variables.user.toString()],
       });
+    },
+    onError: (err) => {
+      console.error("sendMessageToUser error:", err);
     },
   });
 }
