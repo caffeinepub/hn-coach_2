@@ -4,7 +4,6 @@ import {
   type AuthClientLoginOptions,
 } from "@dfinity/auth-client";
 import type { Identity } from "@icp-sdk/core/agent";
-import { DelegationIdentity, isDelegationValid } from "@icp-sdk/core/identity";
 import {
   type PropsWithChildren,
   type ReactNode,
@@ -88,9 +87,9 @@ export function InternetIdentityProvider({
   children: ReactNode;
   createOptions?: AuthClientCreateOptions;
 }>) {
-  // Refs so changes don't trigger effect re-runs
-  const authClientRef = useRef<AuthClient | undefined>(undefined);
+  // Store createOptions in a ref so it doesn't cause re-init on re-renders
   const createOptionsRef = useRef(createOptions);
+  const authClientRef = useRef<AuthClient | null>(null);
   const initializedRef = useRef(false);
 
   const [identity, setIdentity] = useState<Identity | undefined>(undefined);
@@ -102,81 +101,7 @@ export function InternetIdentityProvider({
     setError(new Error(message));
   }, []);
 
-  const handleLoginSuccess = useCallback(() => {
-    const latestIdentity = authClientRef.current?.getIdentity();
-    if (!latestIdentity) {
-      setErrorMessage("Identity not found after successful login");
-      return;
-    }
-    setIdentity(latestIdentity);
-    setStatus("success");
-  }, [setErrorMessage]);
-
-  const handleLoginError = useCallback(
-    (maybeError?: string) => {
-      setErrorMessage(maybeError ?? "Login failed");
-    },
-    [setErrorMessage],
-  );
-
-  const login = useCallback(() => {
-    const client = authClientRef.current;
-    if (!client) {
-      setErrorMessage(
-        "AuthClient is not initialized yet, call login on user interaction.",
-      );
-      return;
-    }
-
-    const currentIdentity = client.getIdentity();
-    if (
-      !currentIdentity.getPrincipal().isAnonymous() &&
-      currentIdentity instanceof DelegationIdentity &&
-      isDelegationValid(currentIdentity.getDelegation())
-    ) {
-      setErrorMessage("User is already authenticated");
-      return;
-    }
-
-    const options: AuthClientLoginOptions = {
-      identityProvider: DEFAULT_IDENTITY_PROVIDER,
-      onSuccess: handleLoginSuccess,
-      onError: handleLoginError,
-      maxTimeToLive: ONE_HOUR_IN_NANOSECONDS * BigInt(24 * 30),
-    };
-
-    setStatus("logging-in");
-    void client.login(options);
-  }, [handleLoginError, handleLoginSuccess, setErrorMessage]);
-
-  const clear = useCallback(() => {
-    const client = authClientRef.current;
-    if (!client) {
-      setErrorMessage("Auth client not initialized");
-      return;
-    }
-
-    void client
-      .logout()
-      .then(() => {
-        setIdentity(undefined);
-        authClientRef.current = undefined;
-        initializedRef.current = false;
-        setStatus("idle");
-        setError(undefined);
-      })
-      .catch((unknownError: unknown) => {
-        setStatus("loginError");
-        setError(
-          unknownError instanceof Error
-            ? unknownError
-            : new Error("Logout failed"),
-        );
-      });
-  }, [setErrorMessage]);
-
-  // Run ONCE on mount — createOptionsRef avoids the infinite loop that
-  // occurred when authClient was listed as a dependency.
+  // Initialize ONCE on mount. Using initializedRef to prevent double-init in StrictMode.
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
@@ -188,10 +113,15 @@ export function InternetIdentityProvider({
         const client = await createAuthClient(createOptionsRef.current);
         if (cancelled) return;
         authClientRef.current = client;
+
         const isAuthenticated = await client.isAuthenticated();
         if (cancelled) return;
+
         if (isAuthenticated) {
-          setIdentity(client.getIdentity());
+          const loadedIdentity = client.getIdentity();
+          if (!loadedIdentity.getPrincipal().isAnonymous()) {
+            setIdentity(loadedIdentity);
+          }
         }
       } catch (unknownError) {
         if (!cancelled) {
@@ -206,10 +136,72 @@ export function InternetIdentityProvider({
         if (!cancelled) setStatus("idle");
       }
     })();
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, []); // empty deps: intentionally runs once on mount
+
+  const login = useCallback(() => {
+    const authClient = authClientRef.current;
+    if (!authClient) {
+      setErrorMessage(
+        "AuthClient is not initialized yet. Please try again in a moment.",
+      );
+      return;
+    }
+
+    const options: AuthClientLoginOptions = {
+      identityProvider: DEFAULT_IDENTITY_PROVIDER,
+      onSuccess: () => {
+        const latestIdentity = authClientRef.current?.getIdentity();
+        if (!latestIdentity || latestIdentity.getPrincipal().isAnonymous()) {
+          setErrorMessage("Identity not found after successful login");
+          return;
+        }
+        setIdentity(latestIdentity);
+        setStatus("success");
+      },
+      onError: (maybeError?: string) => {
+        setErrorMessage(maybeError ?? "Login failed");
+      },
+      maxTimeToLive: ONE_HOUR_IN_NANOSECONDS * BigInt(24 * 365), // 1 year
+    };
+
+    setStatus("logging-in");
+    void authClient.login(options);
+  }, [setErrorMessage]);
+
+  const clear = useCallback(() => {
+    const authClient = authClientRef.current;
+    if (!authClient) {
+      setErrorMessage("Auth client not initialized");
+      return;
+    }
+
+    void authClient
+      .logout()
+      .then(() => {
+        authClientRef.current = null;
+        initializedRef.current = false;
+        setIdentity(undefined);
+        setStatus("idle");
+        setError(undefined);
+        // Re-create client so user can log in again
+        void createAuthClient(createOptionsRef.current).then((client) => {
+          authClientRef.current = client;
+          initializedRef.current = true;
+        });
+      })
+      .catch((unknownError: unknown) => {
+        setStatus("loginError");
+        setError(
+          unknownError instanceof Error
+            ? unknownError
+            : new Error("Logout failed"),
+        );
+      });
+  }, [setErrorMessage]);
 
   const value = useMemo<ProviderValue>(
     () => ({

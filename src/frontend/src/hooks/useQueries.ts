@@ -11,17 +11,15 @@ export function useGetCallerUserProfile() {
   const query = useQuery<UserProfile | null>({
     queryKey: ["currentUserProfile"],
     queryFn: async () => {
-      if (!actor) throw new Error("Actor not available");
+      if (!actor) return null;
       try {
         return await actor.getCallerUserProfile();
       } catch {
-        // If the call fails (e.g. user not yet registered), treat as no profile
         return null;
       }
     },
     enabled: !!actor && !actorFetching,
     retry: false,
-    // Don't treat null as an error
     throwOnError: false,
   });
 
@@ -29,7 +27,6 @@ export function useGetCallerUserProfile() {
     ...query,
     isLoading: actorFetching || (query.isLoading && !query.isFetched),
     isFetched: !!actor && query.isFetched,
-    // Never expose errors since we handle them internally
     isError: false,
   };
 }
@@ -43,8 +40,12 @@ export function useSaveUserProfile() {
       if (!actor) throw new Error("Actor not available");
       await actor.saveCallerUserProfile(profile);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
+    onSuccess: (_data, profile) => {
+      // Update cache immediately so ProtectedRoute sees a complete profile
+      queryClient.setQueryData(["currentUserProfile"], profile);
+    },
+    onError: (err) => {
+      console.error("Save profile error:", err);
     },
   });
 }
@@ -56,10 +57,15 @@ export function useGetMessageHistory() {
     queryKey: ["messageHistory"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getMessageHistory();
+      try {
+        return await actor.getMessageHistory();
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 5000,
+    retry: false,
   });
 }
 
@@ -93,9 +99,14 @@ export function useGetUserBookings() {
     queryKey: ["userBookings"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getUserBookings();
+      try {
+        return await actor.getUserBookings();
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching,
+    retry: false,
   });
 }
 
@@ -109,6 +120,7 @@ export function useGetAvailableTimeSlots(date: string) {
       return actor.getAvailableTimeSlots(date);
     },
     enabled: !!actor && !actorFetching && !!date,
+    retry: false,
   });
 }
 
@@ -159,6 +171,7 @@ export function useGetAllUsers() {
       return actor.getAllUsers();
     },
     enabled: !!actor && !actorFetching,
+    retry: false,
   });
 }
 
@@ -172,6 +185,7 @@ export function useGetUserProfile(principal: Principal | null) {
       return actor.getUserProfile(principal);
     },
     enabled: !!actor && !actorFetching && !!principal,
+    retry: false,
   });
 }
 
@@ -182,10 +196,15 @@ export function useGetUserMessageHistoryAdmin(user: Principal | null) {
     queryKey: ["userMessageHistory", user?.toString()],
     queryFn: async () => {
       if (!actor || !user) return [];
-      return actor.getUserMessageHistory(user);
+      try {
+        return await actor.getUserMessageHistory(user);
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching && !!user,
     refetchInterval: 5000,
+    retry: false,
   });
 }
 
@@ -223,10 +242,15 @@ export function useGetAllBookings() {
     queryKey: ["allBookings"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.getAllBookings();
+      try {
+        return await actor.getAllBookings();
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 30000,
+    retry: false,
   });
 }
 
@@ -252,9 +276,12 @@ export function useMarkMessagesAsRead() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      if (!actor) throw new Error("Actor not available");
-      // markMessagesAsRead exists in Candid service but not in typed wrapper
-      await (actor as any).markMessagesAsRead();
+      if (!actor) return;
+      try {
+        await (actor as any).markMessagesAsRead();
+      } catch {
+        // silently ignore
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["callerUnreadCount"] });
@@ -268,13 +295,16 @@ export function useGetLastReadTimestamp(user: Principal | null) {
     queryKey: ["lastReadTimestamp", user?.toString()],
     queryFn: async () => {
       if (!actor || !user) return null;
-      // getLastReadTimestamp exists in Candid service
-      const result = await (actor as any).getLastReadTimestamp(user);
-      // Candid optional: [] = null, [value] = value
-      return result.length > 0 ? result[0] : null;
+      try {
+        const result = await (actor as any).getLastReadTimestamp(user);
+        return result.length > 0 ? result[0] : null;
+      } catch {
+        return null;
+      }
     },
     enabled: !!actor && !actorFetching && !!user,
     refetchInterval: 5000,
+    retry: false,
   });
 }
 
@@ -294,6 +324,7 @@ export function useGetCallerUnreadCount() {
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 5000,
+    retry: false,
   });
 }
 
@@ -311,6 +342,7 @@ export function useGetCoachUnreadCount(user: Principal | null) {
     },
     enabled: !!actor && !actorFetching && !!user,
     refetchInterval: 5000,
+    retry: false,
   });
 }
 
@@ -319,15 +351,14 @@ export function useMarkCoachReadForUser() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (user: Principal) => {
-      if (!actor) return; // silently skip if actor not ready
+      if (!actor) return;
       try {
         await (actor as any).markCoachReadForUser(user);
       } catch {
-        // silently ignore errors
+        // silently ignore
       }
     },
     onSuccess: (_data, user) => {
-      // Force immediate refetch so badge disappears right away
       queryClient.refetchQueries({
         queryKey: ["coachUnreadCount", user.toString()],
       });
@@ -372,9 +403,14 @@ export function useGetUserPoints(user: Principal | null) {
     queryKey: ["userPoints", user?.toString()],
     queryFn: async () => {
       if (!actor || !user) return BigInt(0);
-      return (actor as any).getUserPoints(user);
+      try {
+        return await (actor as any).getUserPoints(user);
+      } catch {
+        return BigInt(0);
+      }
     },
     enabled: !!actor && !actorFetching && !!user,
+    retry: false,
   });
 }
 
@@ -384,10 +420,15 @@ export function useGetUserPointHistory(user: Principal | null) {
     queryKey: ["userPointHistory", user?.toString()],
     queryFn: async () => {
       if (!actor || !user) return [];
-      return actor.getUserPointHistory(user);
+      try {
+        return await actor.getUserPointHistory(user);
+      } catch {
+        return [];
+      }
     },
     enabled: !!actor && !actorFetching && !!user,
     refetchInterval: 10000,
+    retry: false,
   });
 }
 
@@ -405,6 +446,7 @@ export function useGetCallerPoints() {
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 10000,
+    retry: false,
   });
 }
 
@@ -422,6 +464,7 @@ export function useGetCallerPointHistory() {
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 10000,
+    retry: false,
   });
 }
 
@@ -454,6 +497,7 @@ export function useGetCallerStreak() {
     },
     enabled: !!actor && !actorFetching,
     refetchInterval: 30000,
+    retry: false,
   });
 }
 

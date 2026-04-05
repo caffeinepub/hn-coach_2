@@ -6,53 +6,48 @@ import { getSecretParameter } from "../utils/urlParams";
 import { useInternetIdentity } from "./useInternetIdentity";
 
 const ACTOR_QUERY_KEY = "actor";
+
 export function useActor() {
   const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
-  // Track the previous actor data reference to avoid triggering invalidation on every render
-  const prevActorRef = useRef<backendInterface | null>(null);
+  const principalStr = identity?.getPrincipal().toString() ?? "anonymous";
+  const prevPrincipalRef = useRef<string>("anonymous");
 
   const actorQuery = useQuery<backendInterface>({
-    queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
+    queryKey: [ACTOR_QUERY_KEY, principalStr],
     queryFn: async () => {
-      const isAuthenticated = !!identity;
-
-      if (!isAuthenticated) {
-        // Return anonymous actor if not authenticated
+      if (!identity || identity.getPrincipal().isAnonymous()) {
+        // Anonymous actor
         return await createActorWithConfig();
       }
 
-      const actorOptions = {
-        agentOptions: {
-          identity,
-        },
-      };
+      const actor = await createActorWithConfig({
+        agentOptions: { identity },
+      });
 
-      const actor = await createActorWithConfig(actorOptions);
-      const adminToken = getSecretParameter("caffeineAdminToken") || "";
       try {
+        const adminToken = getSecretParameter("caffeineAdminToken") || "";
         await actor._initializeAccessControlWithSecret(adminToken);
       } catch {
-        // Non-fatal: ignore access control errors
+        // Non-fatal: access control init failure doesn't break the actor
       }
+
       return actor;
     },
     staleTime: Number.POSITIVE_INFINITY,
-    enabled: true,
     retry: false,
+    throwOnError: false,
   });
 
-  // Only invalidate dependent queries when the actor instance actually changes
+  // Only invalidate dependent queries when the principal actually changes
   useEffect(() => {
-    const currentActor = actorQuery.data ?? null;
-    if (currentActor && currentActor !== prevActorRef.current) {
-      prevActorRef.current = currentActor;
-      // Use invalidateQueries only (no refetchQueries) to avoid double-fetching
+    if (actorQuery.data && principalStr !== prevPrincipalRef.current) {
+      prevPrincipalRef.current = principalStr;
       queryClient.invalidateQueries({
         predicate: (query) => !query.queryKey.includes(ACTOR_QUERY_KEY),
       });
     }
-  }, [actorQuery.data, queryClient]);
+  }, [actorQuery.data, principalStr, queryClient]);
 
   return {
     actor: actorQuery.data || null,

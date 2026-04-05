@@ -14,7 +14,21 @@ declare global {
   }
 }
 
-const queryClient = new QueryClient();
+// Global query client with conservative defaults to prevent retry loops
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      throwOnError: false,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+    mutations: {
+      retry: false,
+      throwOnError: false,
+    },
+  },
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>

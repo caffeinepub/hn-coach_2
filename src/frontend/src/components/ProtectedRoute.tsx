@@ -8,7 +8,6 @@ import { useGetCallerUserProfile } from "../hooks/useQueries";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  /** Set to true on the profile page so it doesn't redirect back to itself */
   isProfilePage?: boolean;
 }
 
@@ -41,8 +40,8 @@ export function isProfileComplete(
   );
 }
 
-// Safety timeout: if loading takes longer than this, stop waiting
-const LOADING_TIMEOUT_MS = 10000;
+// Safety timeout: stop waiting after this many ms
+const LOADING_TIMEOUT_MS = 12000;
 
 export function ProtectedRoute({
   children,
@@ -61,27 +60,30 @@ export function ProtectedRoute({
   const [timedOut, setTimedOut] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // We are still loading if:
-  // 1. Identity is initializing
-  // 2. Actor is being fetched
-  // 3. Profile query hasn't fetched yet (and we have an identity)
+  // Loading if: identity is still initializing, or actor is fetching,
+  // or profile hasn't loaded yet (only if we have a non-anonymous identity)
   const stillLoading =
     isInitializing ||
     actorFetching ||
-    (!!identity && profileLoading && !profileFetched);
+    (!!identity &&
+      !identity.getPrincipal().isAnonymous() &&
+      profileLoading &&
+      !profileFetched);
 
   useEffect(() => {
-    if (stillLoading) {
+    if (stillLoading && !timedOut) {
       if (!timerRef.current) {
         timerRef.current = setTimeout(() => {
           setTimedOut(true);
         }, LOADING_TIMEOUT_MS);
       }
     } else {
-      setTimedOut(false);
       if (timerRef.current) {
         clearTimeout(timerRef.current);
         timerRef.current = null;
+      }
+      if (!stillLoading) {
+        setTimedOut(false);
       }
     }
     return () => {
@@ -90,7 +92,7 @@ export function ProtectedRoute({
         timerRef.current = null;
       }
     };
-  }, [stillLoading]);
+  }, [stillLoading, timedOut]);
 
   const isWaiting = !timedOut && stillLoading;
 
@@ -112,17 +114,16 @@ export function ProtectedRoute({
   }
 
   // Not logged in → go to login
-  if (!identity) {
+  if (!identity || identity.getPrincipal().isAnonymous()) {
     return <Navigate to="/login" />;
   }
 
-  // Profile page itself: don't redirect back to /profile — just render
+  // Profile page: never redirect back to itself
   if (isProfilePage) {
     return <>{children}</>;
   }
 
-  // Other pages: only redirect to /profile once we've confirmed the profile
-  // is actually incomplete (i.e., fetch is complete and profile is null/incomplete)
+  // Other pages: redirect to /profile only when fetch is done and profile is incomplete
   if (
     profileFetched &&
     !isProfileComplete(profile) &&
