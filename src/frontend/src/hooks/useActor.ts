@@ -9,10 +9,10 @@ export function useActor() {
   const { identity } = useInternetIdentity();
 
   const actorQuery = useQuery<backendInterface>({
-    queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString() ?? "anon"],
+    queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
     queryFn: async () => {
       if (!identity) {
-        // Anonymous actor
+        // Return anonymous actor if not authenticated
         return await createActorWithConfig();
       }
 
