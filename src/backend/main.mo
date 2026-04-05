@@ -104,7 +104,7 @@ actor {
 
   // CONSTANTS -----------------------------------------------------------------
 
-  // Hourly slots from 6am to 10pm (last slot starts at 22:00)
+  // Hourly slots from 6am to 9pm (last slot starts at 21:00)
   let timeSlots = [
     "06:00",
     "07:00",
@@ -122,7 +122,6 @@ actor {
     "19:00",
     "20:00",
     "21:00",
-    "22:00",
   ];
 
   // COMPARISON MODULES --------------------------------------------------------

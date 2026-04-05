@@ -4,9 +4,6 @@ import { Dumbbell, ShieldCheck } from "lucide-react";
 export function Footer() {
   const year = new Date().getFullYear();
   const navigate = useNavigate();
-  const hostname =
-    typeof window !== "undefined" ? window.location.hostname : "";
-  const caffeineUrl = `https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(hostname)}`;
 
   return (
     <footer
@@ -33,7 +30,6 @@ export function Footer() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Admin panel link — subtle, for coaches only */}
             <button
               type="button"
               onClick={() => navigate({ to: "/admin" })}
@@ -45,17 +41,7 @@ export function Footer() {
             </button>
 
             <p className="text-sm" style={{ color: "#8B7355" }}>
-              &copy; {year}. Built with{" "}
-              <span style={{ color: "#FF6A00" }}>♥</span> using{" "}
-              <a
-                href={caffeineUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-                style={{ color: "#FF6A00" }}
-              >
-                caffeine.ai
-              </a>
+              &copy; {year} HN Coach. All rights reserved.
             </p>
           </div>
         </div>

@@ -136,7 +136,7 @@ export function BookPage() {
                 Book an Appointment
               </h1>
               <p className="text-sm" style={{ color: "#8B7355" }}>
-                Schedule a 40-minute coaching session · Available 6am – 10pm
+                Schedule a 40-minute coaching session · Available 6am – 9pm
               </p>
             </div>
           </div>
