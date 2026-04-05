@@ -61,7 +61,7 @@ async function createAuthClient(
     },
     ...createOptions,
   };
-  return AuthClient.create(options);
+  return await AuthClient.create(options);
 }
 
 function assertProviderPresent(
@@ -93,20 +93,21 @@ export function InternetIdentityProvider({
   const [identity, setIdentity] = useState<Identity | undefined>(undefined);
   const [loginStatus, setStatus] = useState<Status>("initializing");
   const [loginError, setError] = useState<Error | undefined>(undefined);
-  // Guard to ensure we only initialize once on mount
-  const initRef = useRef(false);
-  // Capture createOptions in a ref so we can use it without adding it to deps
+
+  // Store createOptions in a ref so it never triggers the effect to re-run
   const createOptionsRef = useRef(createOptions);
+  // Guard: only initialize once
+  const initializedRef = useRef(false);
 
   const setErrorMessage = useCallback((message: string) => {
     setStatus("loginError");
     setError(new Error(message));
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentionally run once on mount only
+  // Initialize auth client exactly once on mount
   useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
     let cancelled = false;
     void (async () => {
@@ -139,34 +140,39 @@ export function InternetIdentityProvider({
     };
   }, []);
 
+  const handleLoginSuccess = useCallback(() => {
+    if (!authClient) return;
+    const latestIdentity = authClient.getIdentity();
+    setIdentity(latestIdentity);
+    setStatus("success");
+  }, [authClient]);
+
+  const handleLoginError = useCallback(
+    (maybeError?: string) => {
+      setErrorMessage(maybeError ?? "Login failed");
+    },
+    [setErrorMessage],
+  );
+
   const login = useCallback(() => {
     if (!authClient) {
       setErrorMessage(
-        "AuthClient is not initialized yet, make sure to call `login` on user interaction e.g. click.",
+        "AuthClient is not initialized yet. Please try again in a moment.",
       );
       return;
     }
 
+    // No "already authenticated" guard — let Internet Identity handle it
     const options: AuthClientLoginOptions = {
       identityProvider: DEFAULT_IDENTITY_PROVIDER,
-      onSuccess: () => {
-        const latestIdentity = authClient.getIdentity();
-        if (!latestIdentity) {
-          setErrorMessage("Identity not found after successful login");
-          return;
-        }
-        setIdentity(latestIdentity);
-        setStatus("success");
-      },
-      onError: (maybeError?: string) => {
-        setErrorMessage(maybeError ?? "Login failed");
-      },
+      onSuccess: handleLoginSuccess,
+      onError: handleLoginError,
       maxTimeToLive: ONE_HOUR_IN_NANOSECONDS * BigInt(24 * 30), // 30 days
     };
 
     setStatus("logging-in");
     void authClient.login(options);
-  }, [authClient, setErrorMessage]);
+  }, [authClient, handleLoginError, handleLoginSuccess, setErrorMessage]);
 
   const clear = useCallback(() => {
     if (!authClient) {
@@ -178,8 +184,11 @@ export function InternetIdentityProvider({
       .logout()
       .then(() => {
         setIdentity(undefined);
+        setAuthClient(undefined);
         setStatus("idle");
         setError(undefined);
+        // Reset init ref so a fresh auth client can be created on next mount
+        initializedRef.current = false;
       })
       .catch((unknownError: unknown) => {
         setStatus("loginError");
