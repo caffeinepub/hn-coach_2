@@ -9,30 +9,31 @@ import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetCallerUserProfile } from "../hooks/useQueries";
 
 const TRANSFORMATION_IMAGES = [
-  "/assets/generated/transform1-cropped.dim_400x400.jpg",
-  "/assets/generated/transform2-cropped.dim_400x400.jpg",
-  "/assets/generated/transform3-cropped.dim_400x400.jpg",
-  "/assets/generated/transform4-cropped.dim_400x400.jpg",
-  "/assets/generated/transform5-cropped.dim_400x400.jpg",
-  "/assets/generated/transform6-cropped.dim_400x400.jpg",
-  "/assets/generated/transform7-cropped.dim_400x400.jpg",
-  "/assets/generated/transform8-cropped.dim_400x400.jpg",
-  "/assets/generated/transform9-cropped.dim_400x400.jpg",
-  "/assets/generated/transform10-cropped.dim_400x400.jpg",
-  "/assets/generated/transform11-cropped.dim_400x400.jpg",
-  "/assets/generated/transform12-cropped.dim_400x400.jpg",
+  "/assets/img_20260406_113714_095-019d6167-950e-75dc-b59a-be638032ee71.jpg",
+  "/assets/img_20260406_113714_282-019d6167-969c-738e-b81a-1dc91812d5f3.jpg",
+  "/assets/img_20260406_113714_505-019d6167-956b-7584-8c7c-d34d24adb0b0.jpg",
+  "/assets/img_20260406_113714_523-019d6167-9259-7629-8e3a-dde5c4bdcb04.jpg",
+  "/assets/img_20260406_113714_565-019d6167-939e-7699-9487-4eba4b39b0a9.jpg",
+  "/assets/img_20260406_113714_671-019d6167-95c6-77d9-9116-ccc9ef8462c7.jpg",
+  "/assets/img_20260406_113714_689-019d6167-9602-750d-9336-bde6631d4570.jpg",
+  "/assets/img_20260406_120437-019d6188-5a0d-7059-a9b7-9a9efedd3bdb.jpg",
+  "/assets/img_20260406_120343-019d6188-5ba5-7456-b920-4aeccecd0c2f.jpg",
+  "/assets/img_20260406_120325-019d6188-5ea7-7339-ad34-4f49b45fe0ac.jpg",
+  "/assets/img_20260406_120425-019d6188-5f20-7001-9f3d-3ef5ef1f56c9.jpg",
+  "/assets/img_20260406_120353-019d6188-5f93-757c-b8bb-358203f1a1f0.jpg",
+  "/assets/img_20260406_120407-019d6188-5fac-76f8-a334-8ec49db15a24.jpg",
+  "/assets/img_20260406_120646_064-019d6188-60d9-77d7-9325-985f49a605e8.jpg",
 ];
 
-// Duplicate for seamless infinite loop
 const MARQUEE_IMAGES = [...TRANSFORMATION_IMAGES, ...TRANSFORMATION_IMAGES];
 
 function TransformationsMarquee() {
   const trackRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<number>(0);
   const posRef = useRef(0);
-  const ITEM_WIDTH = 160; // px per image including gap
+  const ITEM_WIDTH = 160;
   const TOTAL_WIDTH = ITEM_WIDTH * TRANSFORMATION_IMAGES.length;
-  const SPEED = 0.5; // px per frame
+  const SPEED = 0.5;
 
   useEffect(() => {
     const animate = () => {
@@ -72,6 +73,7 @@ function TransformationsMarquee() {
               height: "144px",
               boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
               border: "2px solid #F0E8DE",
+              background: "#FFFFFF",
             }}
           >
             <img
@@ -80,8 +82,7 @@ function TransformationsMarquee() {
               style={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
-                objectPosition: "center center",
+                objectFit: "contain",
               }}
               loading="lazy"
             />
