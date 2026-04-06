@@ -77,10 +77,13 @@ function TransformationsMarquee() {
             <img
               src={src}
               alt={`Transformation ${(i % TRANSFORMATION_IMAGES.length) + 1}`}
-              className="w-full h-full"
               style={{
+                width: "100%",
+                height: "100%",
                 objectFit: "cover",
-                objectPosition: "center 20%",
+                objectPosition: "center 30%",
+                transform: "scale(1.6)",
+                transformOrigin: "center 35%",
               }}
               loading="lazy"
             />
