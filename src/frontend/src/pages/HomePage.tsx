@@ -93,6 +93,14 @@ function TransformationsMarquee() {
   );
 }
 
+// Stats bar
+const STATS = [
+  { value: "500+", label: "Clients Transformed" },
+  { value: "98%", label: "Satisfaction Rate" },
+  { value: "30", label: "Days to Results" },
+  { value: "24/7", label: "Coach Support" },
+];
+
 export function HomePage() {
   const navigate = useNavigate();
   const { identity } = useInternetIdentity();
@@ -130,293 +138,336 @@ export function HomePage() {
     >
       <NavBar />
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero section */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-10"
+      <main className="flex-1">
+        {/* ── HERO SECTION ─────────────────────────────────────────────── */}
+        <section
+          className="w-full"
+          style={{
+            background:
+              "linear-gradient(135deg, #FFFBF5 0%, #FFF3E8 50%, #FFFBF5 100%)",
+            borderBottom: "1px solid #F0E8DE",
+          }}
         >
-          {isAnonymous ? (
-            <>
-              <p
-                className="text-sm font-medium mb-2"
-                style={{ color: "#FF6A00" }}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+            <div className="flex flex-col lg:flex-row items-center gap-10 lg:gap-16">
+              {/* Left: headline + CTA */}
+              <motion.div
+                className="flex-1 max-w-xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.55 }}
               >
-                Welcome ✨
-              </p>
-              <h1
-                className="text-3xl sm:text-4xl font-display font-bold leading-tight"
-                style={{ color: "#1A1A2E" }}
-              >
-                Your personal wellness
-                <br />
-                <span style={{ color: "#FF6A00" }}>
-                  coaching journey starts here
-                </span>
-              </h1>
-              <p className="mt-3 text-base" style={{ color: "#8B7355" }}>
-                Chat with your coach — sign in when you're ready.
-              </p>
-            </>
-          ) : (
-            <>
-              <p
-                className="text-sm font-medium mb-2"
-                style={{ color: "#FF6A00" }}
-              >
-                Welcome back ✨
-              </p>
-              <h1
-                className="text-3xl sm:text-4xl font-display font-bold leading-tight"
-                style={{ color: "#1A1A2E" }}
-              >
-                Ready to crush it,
-                <br />
-                <span style={{ color: "#FF6A00" }}>{firstName}!</span>
-              </h1>
-              <p className="mt-3 text-base" style={{ color: "#8B7355" }}>
-                Your personal coaching dashboard — stay connected, stay on
-                track.
-              </p>
-            </>
-          )}
-        </motion.div>
-
-        {/* Cards */}
-        <div className="grid grid-cols-1 max-w-lg gap-6">
-          {/* Chat with Coach */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <button
-              type="button"
-              className="relative overflow-hidden rounded-2xl p-6 sm:p-8 border cursor-pointer group hover:shadow-lg transition-all duration-300 w-full text-left"
-              style={{
-                background: "#FFFFFF",
-                borderColor: "#F0E8DE",
-                boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
-              }}
-              onClick={handleCardClick}
-              data-ocid="home.chat.card"
-            >
-              <div
-                className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-5 translate-x-8 -translate-y-8"
-                style={{ background: "#FF6A00" }}
-              />
-              <div className="relative">
-                <div
-                  className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5"
-                  style={{ background: "rgba(255,106,0,0.1)" }}
-                >
-                  <MessageCircle
-                    className="w-7 h-7"
-                    style={{ color: "#FF6A00" }}
-                  />
-                </div>
-                <h2
-                  className="text-xl font-display font-bold mb-2"
-                  style={{ color: "#1A1A2E" }}
-                >
-                  Chat with your Coach
-                </h2>
-                <p className="text-sm mb-6" style={{ color: "#8B7355" }}>
-                  Send messages to your personal coach anytime. Get guidance,
-                  tips, and motivation delivered straight to you.
-                </p>
-                <div
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-sm text-white"
+                <span
+                  className="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
                   style={{
-                    background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
-                    boxShadow: "0 4px 12px rgba(255,106,0,0.3)",
+                    background: "rgba(255,106,0,0.12)",
+                    color: "#FF6A00",
                   }}
                 >
-                  Open Chat <ArrowRight className="w-4 h-4" />
-                </div>
-              </div>
-            </button>
-          </motion.div>
+                  ✨ Personal Wellness Coaching
+                </span>
 
-          {/* Step 1 — Wellness Assessment Report */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <div
-              className="rounded-2xl p-4 border flex items-center justify-between gap-4"
-              style={{
-                background: "#FFFFFF",
-                borderColor: "#F0E8DE",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-              }}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "rgba(255,106,0,0.1)" }}
+                {isAnonymous ? (
+                  <>
+                    <h1
+                      className="text-4xl sm:text-5xl font-display font-bold leading-tight mb-4"
+                      style={{ color: "#1A1A2E" }}
+                    >
+                      Transform Your
+                      <br />
+                      <span style={{ color: "#FF6A00" }}>Health in 2026</span>
+                    </h1>
+                    <p className="text-base mb-8" style={{ color: "#6B7355" }}>
+                      Expert coaching, personalised plans, and real results.
+                      Your journey to a healthier you starts with one chat.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h1
+                      className="text-4xl sm:text-5xl font-display font-bold leading-tight mb-4"
+                      style={{ color: "#1A1A2E" }}
+                    >
+                      Ready to crush it,
+                      <br />
+                      <span style={{ color: "#FF6A00" }}>{firstName}!</span>
+                    </h1>
+                    <p className="text-base mb-8" style={{ color: "#6B7355" }}>
+                      Your personal coaching dashboard — stay connected, stay on
+                      track.
+                    </p>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleCardClick}
+                  className="inline-flex items-center gap-3 px-7 py-4 rounded-2xl font-bold text-base text-white transition-all hover:scale-105 hover:shadow-xl active:scale-95"
+                  style={{
+                    background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                    boxShadow: "0 8px 24px rgba(255,106,0,0.35)",
+                  }}
+                  data-ocid="home.chat.hero.button"
                 >
-                  <span
-                    className="text-sm font-bold"
-                    style={{ color: "#FF6A00" }}
-                  >
-                    1
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p
-                    className="text-xs font-medium"
-                    style={{ color: "#8B7355" }}
-                  >
-                    Step 1
+                  <MessageCircle className="w-5 h-5" />
+                  Chat with your Coach
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </motion.div>
+
+              {/* Right: hero illustration */}
+              <motion.div
+                className="flex-1 flex justify-center lg:justify-end"
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.65, delay: 0.1 }}
+              >
+                <img
+                  src="/assets/generated/hero-coaching-chat.dim_600x500.png"
+                  alt="Wellness coaching illustration"
+                  className="w-full max-w-sm lg:max-w-md xl:max-w-lg drop-shadow-xl"
+                  style={{ borderRadius: "24px" }}
+                />
+              </motion.div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── STATS BAR ────────────────────────────────────────────────── */}
+        <motion.section
+          className="w-full py-6"
+          style={{ background: "#FF6A00" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+              {STATS.map((s) => (
+                <div key={s.label}>
+                  <p className="text-2xl sm:text-3xl font-display font-bold text-white">
+                    {s.value}
                   </p>
                   <p
-                    className="text-sm font-semibold leading-snug"
+                    className="text-xs font-medium mt-0.5"
+                    style={{ color: "rgba(255,255,255,0.8)" }}
+                  >
+                    {s.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* ── STEPS SECTION ────────────────────────────────────────────── */}
+        <section className="w-full py-14" style={{ background: "#FFFBF5" }}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              className="text-center mb-10"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <span
+                className="inline-block text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-3"
+                style={{
+                  background: "rgba(255,106,0,0.1)",
+                  color: "#FF6A00",
+                }}
+              >
+                Your Journey
+              </span>
+              <h2
+                className="text-2xl sm:text-3xl font-display font-bold"
+                style={{ color: "#1A1A2E" }}
+              >
+                3 Steps to a Better You
+              </h2>
+              <p
+                className="mt-2 text-sm max-w-md mx-auto"
+                style={{ color: "#8B7355" }}
+              >
+                Follow these steps to get the most from your coaching
+                experience.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {/* Step 1 */}
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.25 }}
+                className="rounded-3xl overflow-hidden border group hover:shadow-xl transition-all duration-300"
+                style={{
+                  background: "#FFFFFF",
+                  borderColor: "#F0E8DE",
+                  boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+                }}
+              >
+                <div
+                  className="h-44 overflow-hidden flex items-center justify-center"
+                  style={{ background: "#FFF3E8" }}
+                >
+                  <img
+                    src="/assets/generated/illus-wellness.dim_400x320.png"
+                    alt="Wellness assessment illustration"
+                    className="h-40 w-auto object-contain group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-5">
+                  <span
+                    className="text-xs font-bold uppercase tracking-wider"
+                    style={{ color: "#FF6A00" }}
+                  >
+                    Step 1
+                  </span>
+                  <h3
+                    className="text-base font-display font-bold mt-1 mb-2"
                     style={{ color: "#1A1A2E" }}
                   >
                     Wellness Assessment Report
+                  </h3>
+                  <p className="text-xs mb-4" style={{ color: "#8B7355" }}>
+                    Get your personalized wellness report to understand where
+                    you stand.
                   </p>
+                  <a
+                    href="https://hn-coach-wellness-report-by1.caffeine.xyz/?ref=9155348866"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-xs text-white transition-all hover:opacity-90 hover:shadow-md"
+                    style={{
+                      background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                      boxShadow: "0 3px 10px rgba(255,106,0,0.3)",
+                    }}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Now
+                  </a>
                 </div>
-              </div>
-              <a
-                href="https://hn-coach-wellness-report-by1.caffeine.xyz/?ref=9155348866"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-xs text-white transition-opacity hover:opacity-90"
+              </motion.div>
+
+              {/* Step 2 */}
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.35 }}
+                className="rounded-3xl overflow-hidden border group hover:shadow-xl transition-all duration-300"
                 style={{
-                  background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
-                  boxShadow: "0 3px 8px rgba(255,106,0,0.25)",
+                  background: "#FFFFFF",
+                  borderColor: "#F0E8DE",
+                  boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
                 }}
               >
-                <Download className="w-3.5 h-3.5" />
-                Download Now
-              </a>
-            </div>
-          </motion.div>
-
-          {/* Step 2 — Personalized Diet Plan */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <div
-              className="rounded-2xl p-4 border flex items-center justify-between gap-4"
-              style={{
-                background: "#FFFFFF",
-                borderColor: "#F0E8DE",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-              }}
-            >
-              <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "rgba(255,106,0,0.1)" }}
+                  className="h-44 overflow-hidden flex items-center justify-center"
+                  style={{ background: "#F0FDF4" }}
                 >
+                  <img
+                    src="/assets/generated/illus-diet.dim_400x320.png"
+                    alt="Diet plan illustration"
+                    className="h-40 w-auto object-contain group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-5">
                   <span
-                    className="text-sm font-bold"
+                    className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: "#FF6A00" }}
                   >
-                    2
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p
-                    className="text-xs font-medium"
-                    style={{ color: "#8B7355" }}
-                  >
                     Step 2
-                  </p>
-                  <p
-                    className="text-sm font-semibold leading-snug"
+                  </span>
+                  <h3
+                    className="text-base font-display font-bold mt-1 mb-2"
                     style={{ color: "#1A1A2E" }}
                   >
                     Personalized Diet Plan
+                  </h3>
+                  <p className="text-xs mb-4" style={{ color: "#8B7355" }}>
+                    A tailored nutrition plan built for your body and your
+                    goals.
                   </p>
+                  <a
+                    href="https://dietplan-hncoach-8m2.caffeine.xyz/admin?ref=9155348866"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-xs text-white transition-all hover:opacity-90 hover:shadow-md"
+                    style={{
+                      background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                      boxShadow: "0 3px 10px rgba(255,106,0,0.3)",
+                    }}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Now
+                  </a>
                 </div>
-              </div>
-              <a
-                href="https://dietplan-hncoach-8m2.caffeine.xyz/admin?ref=9155348866"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-xs text-white transition-opacity hover:opacity-90"
+              </motion.div>
+
+              {/* Step 3 */}
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.45 }}
+                className="rounded-3xl overflow-hidden border group hover:shadow-xl transition-all duration-300"
                 style={{
-                  background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
-                  boxShadow: "0 3px 8px rgba(255,106,0,0.25)",
+                  background: "#FFFFFF",
+                  borderColor: "#F0E8DE",
+                  boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
                 }}
               >
-                <Download className="w-3.5 h-3.5" />
-                Download Now
-              </a>
-            </div>
-          </motion.div>
-
-          {/* Step 3 — Personal Coaching Program */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <div
-              className="rounded-2xl p-4 border flex items-center justify-between gap-4"
-              style={{
-                background: "#FFFFFF",
-                borderColor: "#F0E8DE",
-                boxShadow: "0 2px 12px rgba(0,0,0,0.05)",
-              }}
-            >
-              <div className="flex items-center gap-3 min-w-0">
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                  style={{ background: "rgba(255,106,0,0.1)" }}
+                  className="h-44 overflow-hidden flex items-center justify-center"
+                  style={{ background: "#FFF8F0" }}
                 >
+                  <img
+                    src="/assets/generated/illus-program.dim_400x320.png"
+                    alt="Coaching program illustration"
+                    className="h-40 w-auto object-contain group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                <div className="p-5">
                   <span
-                    className="text-sm font-bold"
+                    className="text-xs font-bold uppercase tracking-wider"
                     style={{ color: "#FF6A00" }}
                   >
-                    3
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p
-                    className="text-xs font-medium"
-                    style={{ color: "#8B7355" }}
-                  >
                     Step 3 · 30 Days Money Back Guarantee
-                  </p>
-                  <p
-                    className="text-sm font-semibold leading-snug"
+                  </span>
+                  <h3
+                    className="text-base font-display font-bold mt-1 mb-2"
                     style={{ color: "#1A1A2E" }}
                   >
                     Personal Coaching Program
+                  </h3>
+                  <p className="text-xs mb-4" style={{ color: "#8B7355" }}>
+                    Join a proven 30-day program designed to build lasting
+                    healthy habits.
                   </p>
+                  <a
+                    href="https://hn-coach-plans-jw1.caffeine.xyz"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-xs text-white transition-all hover:opacity-90 hover:shadow-md"
+                    style={{
+                      background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
+                      boxShadow: "0 3px 10px rgba(255,106,0,0.3)",
+                    }}
+                  >
+                    Start Now <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
                 </div>
-              </div>
-              <a
-                href="https://hn-coach-plans-jw1.caffeine.xyz"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-xs text-white transition-opacity hover:opacity-90"
-                style={{
-                  background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
-                  boxShadow: "0 3px 8px rgba(255,106,0,0.25)",
-                }}
-              >
-                Start Now <ArrowRight className="w-3.5 h-3.5" />
-              </a>
+              </motion.div>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </section>
 
-        {/* Admin Access */}
+        {/* ── ADMIN ACCESS ─────────────────────────────────────────────── */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          className="flex justify-center mt-10"
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="flex justify-center pb-8"
+          style={{ background: "#FFFBF5" }}
         >
           <button
             type="button"
@@ -435,38 +486,38 @@ export function HomePage() {
             Admin Access
           </button>
         </motion.div>
-      </main>
 
-      {/* Our Transformations Section */}
-      <motion.section
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.5 }}
-        className="w-full py-12"
-        style={{ background: "#FFFFFF", borderTop: "1px solid #F0E8DE" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="flex flex-col items-center text-center">
-            <span
-              className="text-xs font-semibold uppercase tracking-widest mb-2"
-              style={{ color: "#FF6A00" }}
-            >
-              Real Results
-            </span>
-            <h2
-              className="text-2xl sm:text-3xl font-display font-bold"
-              style={{ color: "#1A1A2E" }}
-            >
-              Our Transformations
-            </h2>
-            <p className="mt-2 text-sm max-w-md" style={{ color: "#8B7355" }}>
-              Real people. Real results. See the incredible journeys of our
-              coaching community.
-            </p>
+        {/* ── OUR TRANSFORMATIONS ──────────────────────────────────────── */}
+        <motion.section
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="w-full py-12"
+          style={{ background: "#FFFFFF", borderTop: "1px solid #F0E8DE" }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+            <div className="flex flex-col items-center text-center">
+              <span
+                className="text-xs font-semibold uppercase tracking-widest mb-2"
+                style={{ color: "#FF6A00" }}
+              >
+                Real Results
+              </span>
+              <h2
+                className="text-2xl sm:text-3xl font-display font-bold"
+                style={{ color: "#1A1A2E" }}
+              >
+                Our Transformations
+              </h2>
+              <p className="mt-2 text-sm max-w-md" style={{ color: "#8B7355" }}>
+                Real people. Real results. See the incredible journeys of our
+                coaching community.
+              </p>
+            </div>
           </div>
-        </div>
-        <TransformationsMarquee />
-      </motion.section>
+          <TransformationsMarquee />
+        </motion.section>
+      </main>
 
       <Footer />
 
