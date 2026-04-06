@@ -9,18 +9,18 @@ import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import { useGetCallerUserProfile } from "../hooks/useQueries";
 
 const TRANSFORMATION_IMAGES = [
-  "/assets/img_20260406_113710_515-019d6167-907b-7652-b337-d3cb7b4bc85c.jpg",
-  "/assets/img_20260406_113709_836-019d6167-9128-732d-9d33-2d1abeebff45.jpg",
-  "/assets/img_20260406_113714_523-019d6167-9259-7629-8e3a-dde5c4bdcb04.jpg",
-  "/assets/img_20260406_113709_945-019d6167-9343-73e8-90c3-8b2c9de01103.jpg",
-  "/assets/img_20260406_113714_565-019d6167-939e-7699-9487-4eba4b39b0a9.jpg",
-  "/assets/img_20260406_113710_269-019d6167-9429-755b-a2fd-d0b5785c0161.jpg",
-  "/assets/img_20260406_113710_240-019d6167-94ef-760a-a84d-fadcbc89edbf.jpg",
-  "/assets/img_20260406_113714_505-019d6167-956b-7584-8c7c-d34d24adb0b0.jpg",
-  "/assets/img_20260406_113714_671-019d6167-95c6-77d9-9116-ccc9ef8462c7.jpg",
-  "/assets/img_20260406_113714_689-019d6167-9602-750d-9336-bde6631d4570.jpg",
-  "/assets/img_20260406_113714_095-019d6167-950e-75dc-b59a-be638032ee71.jpg",
-  "/assets/img_20260406_113714_282-019d6167-969c-738e-b81a-1dc91812d5f3.jpg",
+  "/assets/generated/transform1-cropped.dim_400x400.jpg",
+  "/assets/generated/transform2-cropped.dim_400x400.jpg",
+  "/assets/generated/transform3-cropped.dim_400x400.jpg",
+  "/assets/generated/transform4-cropped.dim_400x400.jpg",
+  "/assets/generated/transform5-cropped.dim_400x400.jpg",
+  "/assets/generated/transform6-cropped.dim_400x400.jpg",
+  "/assets/generated/transform7-cropped.dim_400x400.jpg",
+  "/assets/generated/transform8-cropped.dim_400x400.jpg",
+  "/assets/generated/transform9-cropped.dim_400x400.jpg",
+  "/assets/generated/transform10-cropped.dim_400x400.jpg",
+  "/assets/generated/transform11-cropped.dim_400x400.jpg",
+  "/assets/generated/transform12-cropped.dim_400x400.jpg",
 ];
 
 // Duplicate for seamless infinite loop
@@ -81,9 +81,7 @@ function TransformationsMarquee() {
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                objectPosition: "center 30%",
-                transform: "scale(1.6)",
-                transformOrigin: "center 35%",
+                objectPosition: "center center",
               }}
               loading="lazy"
             />
