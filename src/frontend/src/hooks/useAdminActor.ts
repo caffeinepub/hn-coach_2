@@ -1,6 +1,7 @@
+import { createActorWithConfig } from "@caffeineai/core-infrastructure";
 import { useEffect, useRef, useState } from "react";
-import type { backendInterface } from "../backend";
-import { createActorWithConfig } from "../config";
+import { createActor } from "../backend";
+import type { backendInterface } from "../types";
 
 /**
  * Creates an anonymous actor for the admin panel.
@@ -16,18 +17,18 @@ export function useAdminActor() {
     if (initialized.current) return;
     initialized.current = true;
     setIsLoading(true);
-    createActorWithConfig()
+    createActorWithConfig(createActor)
       .then((a) => {
-        setActor(a);
+        setActor(a as unknown as backendInterface);
         setIsLoading(false);
       })
       .catch((err) => {
         console.error("Failed to create admin actor:", err);
         // Retry once after 2 seconds
         setTimeout(() => {
-          createActorWithConfig()
+          createActorWithConfig(createActor)
             .then((a) => {
-              setActor(a);
+              setActor(a as unknown as backendInterface);
             })
             .catch((e) => {
               console.error("Admin actor retry also failed:", e);

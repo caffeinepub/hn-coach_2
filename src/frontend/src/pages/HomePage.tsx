@@ -6,7 +6,10 @@ import { Footer } from "../components/Footer";
 import { LoginModal } from "../components/LoginModal";
 import { NavBar } from "../components/NavBar";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
-import { useGetCallerUserProfile } from "../hooks/useQueries";
+import {
+  useGetCallerUnreadCount,
+  useGetCallerUserProfile,
+} from "../hooks/useQueries";
 
 const TRANSFORMATION_IMAGES = [
   "/assets/img_20260406_113714_095-019d6167-950e-75dc-b59a-be638032ee71.jpg",
@@ -108,6 +111,12 @@ export function HomePage() {
 
   const isAnonymous = !identity || identity.getPrincipal().isAnonymous();
 
+  // Only fetch unread count when authenticated
+  const { data: unreadCount } = useGetCallerUnreadCount();
+  const hasUnread =
+    !isAnonymous && unreadCount !== undefined && unreadCount > BigInt(0);
+  const unreadNum = hasUnread ? Number(unreadCount) : 0;
+
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingDestination, setPendingDestination] = useState<"chat" | null>(
     null,
@@ -178,8 +187,8 @@ export function HomePage() {
                       <span style={{ color: "#FF6A00" }}>Health in 2026</span>
                     </h1>
                     <p className="text-base mb-8" style={{ color: "#6B7355" }}>
-                      Expert coaching, personalised plans, and real results.
-                      Your journey to a healthier you starts with one chat.
+                      Chat with your coach, earn points for following the coach,
+                      and redeem them into exciting gifts and discounts.
                     </p>
                   </>
                 ) : (
@@ -193,8 +202,8 @@ export function HomePage() {
                       <span style={{ color: "#FF6A00" }}>{firstName}!</span>
                     </h1>
                     <p className="text-base mb-8" style={{ color: "#6B7355" }}>
-                      Your personal coaching dashboard — stay connected, stay on
-                      track.
+                      Chat with your coach, earn points for following the coach,
+                      and redeem them into exciting gifts and discounts.
                     </p>
                   </>
                 )}
@@ -202,7 +211,7 @@ export function HomePage() {
                 <button
                   type="button"
                   onClick={handleCardClick}
-                  className="inline-flex items-center gap-3 px-7 py-4 rounded-2xl font-bold text-base text-white transition-all hover:scale-105 hover:shadow-xl active:scale-95"
+                  className="relative inline-flex items-center gap-3 px-7 py-4 rounded-2xl font-bold text-base text-white transition-all hover:scale-105 hover:shadow-xl active:scale-95"
                   style={{
                     background: "linear-gradient(135deg, #FF6A00, #FF8C3A)",
                     boxShadow: "0 8px 24px rgba(255,106,0,0.35)",
@@ -212,6 +221,20 @@ export function HomePage() {
                   <MessageCircle className="w-5 h-5" />
                   Chat with your Coach
                   <ArrowRight className="w-5 h-5" />
+                  {/* Unread badge */}
+                  {hasUnread && (
+                    <span
+                      className="absolute -top-2 -right-2 min-w-[22px] h-[22px] rounded-full flex items-center justify-center text-white text-xs font-bold px-1 animate-pulse"
+                      style={{
+                        background: "#ef4444",
+                        boxShadow:
+                          "0 0 0 3px #FFFBF5, 0 0 0 5px rgba(239,68,68,0.4)",
+                      }}
+                      data-ocid="home.chat.unread_badge"
+                    >
+                      {unreadNum > 99 ? "99+" : unreadNum}
+                    </span>
+                  )}
                 </button>
               </motion.div>
 

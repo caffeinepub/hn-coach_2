@@ -57,39 +57,8 @@ export interface UserProfile {
   'targetGoal' : string,
   'avatarBlobId' : [] | [string],
 }
-export type UserRole = { 'admin' : null } |
-  { 'user' : null } |
-  { 'guest' : null };
-export interface _CaffeineStorageCreateCertificateResult {
-  'method' : string,
-  'blob_hash' : string,
-}
-export interface _CaffeineStorageRefillInformation {
-  'proposed_top_up_amount' : [] | [bigint],
-}
-export interface _CaffeineStorageRefillResult {
-  'success' : [] | [boolean],
-  'topped_up_amount' : [] | [bigint],
-}
 export interface _SERVICE {
-  '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
-  '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
-  '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
-    [Array<Uint8Array>],
-    undefined
-  >,
-  '_caffeineStorageCreateCertificate' : ActorMethod<
-    [string],
-    _CaffeineStorageCreateCertificateResult
-  >,
-  '_caffeineStorageRefillCashier' : ActorMethod<
-    [[] | [_CaffeineStorageRefillInformation]],
-    _CaffeineStorageRefillResult
-  >,
-  '_caffeineStorageUpdateGatewayPrincipals' : ActorMethod<[], undefined>,
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'adminCancelBooking' : ActorMethod<[bigint], undefined>,
-  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'bookAppointment' : ActorMethod<[string, string], bigint>,
   'cancelAllBookingsForUser' : ActorMethod<[Principal], undefined>,
   'cancelBooking' : ActorMethod<[bigint], undefined>,
@@ -103,8 +72,9 @@ export interface _SERVICE {
   'getCallerPointHistory' : ActorMethod<[], Array<PointRecord>>,
   'getCallerPoints' : ActorMethod<[], bigint>,
   'getCallerStreak' : ActorMethod<[], StreakInfo>,
+  'getCallerUnreadCount' : ActorMethod<[], bigint>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
-  'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getCoachUnreadCountForUser' : ActorMethod<[Principal], bigint>,
   'getLastReadTimestamp' : ActorMethod<[Principal], [] | [bigint]>,
   'getMessageHistory' : ActorMethod<[], Array<Message>>,
   'getUserBookings' : ActorMethod<[], Array<Booking>>,
@@ -113,7 +83,7 @@ export interface _SERVICE {
   'getUserPoints' : ActorMethod<[Principal], bigint>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'givePoints' : ActorMethod<[Principal, bigint, PointReason, string], bigint>,
-  'isCallerAdmin' : ActorMethod<[], boolean>,
+  'markCoachReadForUser' : ActorMethod<[Principal], undefined>,
   'markMessagesAsRead' : ActorMethod<[], undefined>,
   'recordActivity' : ActorMethod<[], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,

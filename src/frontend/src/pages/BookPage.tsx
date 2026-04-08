@@ -14,7 +14,6 @@ import {
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { BookingStatus } from "../backend";
 import { Footer } from "../components/Footer";
 import { LoginModal } from "../components/LoginModal";
 import { NameModal } from "../components/NameModal";
@@ -27,6 +26,7 @@ import {
   useGetCallerUserProfile,
   useGetUserBookings,
 } from "../hooks/useQueries";
+import { BookingStatus } from "../types";
 
 export function BookPage() {
   const { identity } = useInternetIdentity();

@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { loadConfig } from "@caffeineai/core-infrastructure";
 import { useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
 import {
@@ -22,14 +23,10 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { MessageType, SenderRole } from "../backend";
-import { PointReason } from "../backend";
-import type { PointRecord } from "../backend";
 import { Footer } from "../components/Footer";
 import { LoginModal } from "../components/LoginModal";
 import { NameModal } from "../components/NameModal";
 import { NavBar } from "../components/NavBar";
-import { loadConfig } from "../config";
 import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
@@ -40,6 +37,9 @@ import {
   useMarkMessagesAsRead,
   useSendMessageToCoach,
 } from "../hooks/useQueries";
+import { MessageType, SenderRole } from "../types";
+import { PointReason } from "../types";
+import type { PointRecord } from "../types";
 import { StorageClient } from "../utils/StorageClient";
 
 function FileMessage({

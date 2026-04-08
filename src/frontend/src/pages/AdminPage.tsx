@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { loadConfig } from "@caffeineai/core-infrastructure";
 import type { Principal } from "@icp-sdk/core/principal";
 import { format } from "date-fns";
 import {
@@ -36,16 +37,6 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import {
-  BookingStatus,
-  MessageType,
-  PointReason,
-  SenderRole,
-} from "../backend";
-import type { Booking, Message } from "../backend";
-import type { PointRecord } from "../backend";
-import type { backendInterface } from "../backend";
-import { loadConfig } from "../config";
 import { useAdminActor } from "../hooks/useAdminActor";
 import {
   useAdminCancelBookingMutation,
@@ -61,6 +52,10 @@ import {
   useAdminMarkCoachReadForUser,
   useAdminSendMessageToUser,
 } from "../hooks/useAdminQueries";
+import { BookingStatus, MessageType, PointReason, SenderRole } from "../types";
+import type { Booking, Message } from "../types";
+import type { PointRecord } from "../types";
+import type { backendInterface } from "../types";
 import { StorageClient } from "../utils/StorageClient";
 import { showPushNotification } from "../utils/notifications";
 
@@ -212,8 +207,11 @@ function UserListItem({
       {/* Unread badge */}
       {hasUnread && (
         <span
-          className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-          style={{ background: "#ef4444" }}
+          className="min-w-[20px] h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 px-1 animate-pulse"
+          style={{
+            background: "#ef4444",
+            boxShadow: "0 0 0 2px rgba(239,68,68,0.3)",
+          }}
           data-ocid="admin.user.unread_badge"
         >
           {unreadNum > 99 ? "99+" : unreadNum}
@@ -264,7 +262,7 @@ function PointsBar({
   const checkAndAwardDailyBonus = async () => {
     if (!actor) return;
     try {
-      const history: import("../backend").PointRecord[] =
+      const history: PointRecord[] =
         await actor.getUserPointHistory(selectedUser);
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);

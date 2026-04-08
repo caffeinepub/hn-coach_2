@@ -7,14 +7,6 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export interface Booking {
-    id: bigint;
-    status: BookingStatus;
-    date: string;
-    user: Principal;
-    timestamp: bigint;
-    timeSlot: string;
-}
 export interface StreakInfo {
     daysToNext: bigint;
     nextMilestone: bigint;
@@ -26,6 +18,14 @@ export interface Message {
     timestamp: bigint;
     blobId?: string;
     senderRole: SenderRole;
+}
+export interface Booking {
+    id: bigint;
+    status: BookingStatus;
+    date: string;
+    user: Principal;
+    timestamp: bigint;
+    timeSlot: string;
 }
 export interface PointRecord {
     remark: string;
@@ -62,14 +62,8 @@ export enum SenderRole {
     coach = "coach",
     user = "user"
 }
-export enum UserRole {
-    admin = "admin",
-    user = "user",
-    guest = "guest"
-}
 export interface backendInterface {
     adminCancelBooking(bookingId: bigint): Promise<void>;
-    assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     bookAppointment(date: string, timeSlot: string): Promise<bigint>;
     cancelAllBookingsForUser(user: Principal): Promise<void>;
     cancelBooking(bookingId: bigint): Promise<void>;
@@ -83,8 +77,9 @@ export interface backendInterface {
     getCallerPointHistory(): Promise<Array<PointRecord>>;
     getCallerPoints(): Promise<bigint>;
     getCallerStreak(): Promise<StreakInfo>;
+    getCallerUnreadCount(): Promise<bigint>;
     getCallerUserProfile(): Promise<UserProfile | null>;
-    getCallerUserRole(): Promise<UserRole>;
+    getCoachUnreadCountForUser(user: Principal): Promise<bigint>;
     getLastReadTimestamp(user: Principal): Promise<bigint | null>;
     getMessageHistory(): Promise<Array<Message>>;
     getUserBookings(): Promise<Array<Booking>>;
@@ -93,7 +88,7 @@ export interface backendInterface {
     getUserPoints(user: Principal): Promise<bigint>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     givePoints(user: Principal, points: bigint, reason: PointReason, remark: string): Promise<bigint>;
-    isCallerAdmin(): Promise<boolean>;
+    markCoachReadForUser(user: Principal): Promise<void>;
     markMessagesAsRead(): Promise<void>;
     recordActivity(): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;

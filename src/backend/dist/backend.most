@@ -1,0 +1,157 @@
+// Version: 3.0.0
+type BookingStatus__163633778 = {#booked; #cancelled};
+type Booking__519012722 =
+  {
+    date : Text;
+    id : Nat;
+    status : BookingStatus__163633778;
+    timeSlot : Text;
+    timestamp : Int;
+    user : Principal
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type MessageHistory__978837408 = List__415060402<Message__19119041>;
+type MessageType__269899696 = {#file; #image; #text};
+type Message__19119041 =
+  {
+    blobId : ?Text;
+    message : Text;
+    messageType : MessageType__269899696;
+    senderRole : SenderRole__620012953;
+    timestamp : Int
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type OldAccessControlState__841599830 =
+  {
+    var adminAssigned : Bool;
+    userRoles : Map__605269027<Principal, OldUserRole__889293160>
+  };
+type OldBookingStatus__846941108 = {#booked; #cancelled};
+type OldBooking__221110599 =
+  {
+    date : Text;
+    id : Nat;
+    status : OldBookingStatus__846941108;
+    timeSlot : Text;
+    timestamp : Int;
+    user : Principal
+  };
+type OldMessageHistory__571493461 = List__415060402<OldMessage__897832057>;
+type OldMessageType__519610819 = {#file; #image; #text};
+type OldMessage__897832057 =
+  {
+    blobId : ?Text;
+    message : Text;
+    messageType : OldMessageType__519610819;
+    senderRole : OldSenderRole__1043473396;
+    timestamp : Int
+  };
+type OldPointReason__89562372 =
+  {#custom; #dailyBonus; #footsteps; #weightImage};
+type OldPointRecord__556170405 =
+  {
+    points : Nat;
+    reason : OldPointReason__89562372;
+    remark : Text;
+    timestamp : Int
+  };
+type OldSenderRole__1043473396 = {#coach; #user};
+type OldUserProfile__416069324 =
+  {
+    age : Nat;
+    avatarBlobId : ?Text;
+    email : Text;
+    height : Text;
+    name : Text;
+    targetGoal : Text;
+    weight : Text;
+    whatsAppNumber : Text
+  };
+type OldUserRole__889293160 = {#admin; #guest; #user};
+type PointReason__770349565 =
+  {#custom; #dailyBonus; #footsteps; #weightImage};
+type PointRecord__769115713 =
+  {
+    points : Nat;
+    reason : PointReason__770349565;
+    remark : Text;
+    timestamp : Int
+  };
+type SenderRole__620012953 = {#coach; #user};
+type UserProfile__491224006 =
+  {
+    age : Nat;
+    avatarBlobId : ?Text;
+    email : Text;
+    height : Text;
+    name : Text;
+    targetGoal : Text;
+    weight : Text;
+    whatsAppNumber : Text
+  };
+actor ({
+  in accessControlState : OldAccessControlState__841599830;
+  in bookingStore : Map__605269027<Nat, OldBooking__221110599>;
+  in chatStore : Map__605269027<Principal, OldMessageHistory__571493461>;
+  in coachLastReadTimestamps : Map__605269027<Principal, Int>;
+  in lastReadTimestamps : Map__605269027<Principal, Int>;
+  in nanoPerDay : Int;
+  in var nextBookingId : Nat;
+  in pointsStore :
+    Map__605269027<Principal, List__415060402<OldPointRecord__556170405>>;
+  in profileStore : Map__605269027<Principal, OldUserProfile__416069324>;
+  in streakStore : Map__605269027<Principal, List__415060402<Int>>;
+  in timeSlots : [Text]
+}, {
+  stable bookingStore :
+    {
+      var root : Node__46230540<Nat, Booking__519012722>;
+      var size : Nat__490723111
+    };
+  stable chatStore :
+    {
+      var root : Node__46230540<Principal, MessageHistory__978837408>;
+      var size : Nat__490723111
+    };
+  stable coachLastReadTimestamps :
+    {var root : Node__46230540<Principal, Int>; var size : Nat__490723111};
+  stable lastReadTimestamps :
+    {var root : Node__46230540<Principal, Int>; var size : Nat__490723111};
+  stable nanoPerDay : Int;
+  stable var nextBookingId : Nat;
+  stable pointsStore :
+    {
+      var root :
+        Node__46230540<Principal, List__415060402<PointRecord__769115713>>;
+      var size : Nat__490723111
+    };
+  stable profileStore :
+    {
+      var root : Node__46230540<Principal, UserProfile__491224006>;
+      var size : Nat__490723111
+    };
+  stable streakStore :
+    {
+      var root : Node__46230540<Principal, List__415060402<Int>>;
+      var size : Nat__490723111
+    };
+  stable timeSlots : [Text]
+}) ;

@@ -1,0 +1,103 @@
+type UserProfile = 
+ record {
+   age: nat;
+   avatarBlobId: opt text;
+   email: text;
+   height: text;
+   name: text;
+   targetGoal: text;
+   weight: text;
+   whatsAppNumber: text;
+ };
+type StreakInfo = 
+ record {
+   currentStreak: nat;
+   daysToNext: nat;
+   nextMilestone: nat;
+ };
+type SenderRole = 
+ variant {
+   coach;
+   user;
+ };
+type PointRecord = 
+ record {
+   points: nat;
+   reason: PointReason;
+   remark: text;
+   timestamp: int;
+ };
+type PointReason = 
+ variant {
+   custom;
+   dailyBonus;
+   footsteps;
+   weightImage;
+ };
+type MessageType = 
+ variant {
+   file;
+   image;
+   "text";
+ };
+type Message = 
+ record {
+   blobId: opt text;
+   message: text;
+   messageType: MessageType;
+   senderRole: SenderRole;
+   timestamp: int;
+ };
+type BookingStatus = 
+ variant {
+   booked;
+   cancelled;
+ };
+type Booking = 
+ record {
+   date: text;
+   id: nat;
+   status: BookingStatus;
+   timeSlot: text;
+   timestamp: int;
+   user: principal;
+ };
+service : {
+  adminCancelBooking: (bookingId: nat) -> ();
+  bookAppointment: (date: text, timeSlot: text) -> (nat);
+  cancelAllBookingsForUser: (user: principal) -> ();
+  cancelBooking: (bookingId: nat) -> ();
+  getAllBookings: () -> (vec Booking) query;
+  getAllBookingsByUser: (user: principal) -> (vec Booking) query;
+  getAllBookingsForDate: (date: text) -> (vec Booking) query;
+  getAllProfiles: () -> (vec UserProfile) query;
+  getAllUsers: () -> (vec principal) query;
+  getAvailableTimeSlots: (date: text) -> (vec record {
+                                                text;
+                                                bool;
+                                              }) query;
+  getBookingsByDate: (date: text) -> (vec Booking) query;
+  getCallerPointHistory: () -> (vec PointRecord) query;
+  getCallerPoints: () -> (nat) query;
+  getCallerStreak: () -> (StreakInfo) query;
+  getCallerUnreadCount: () -> (nat) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCoachUnreadCountForUser: (user: principal) -> (nat) query;
+  getLastReadTimestamp: (user: principal) -> (opt int) query;
+  getMessageHistory: () -> (vec Message) query;
+  getUserBookings: () -> (vec Booking) query;
+  getUserMessageHistory: (user: principal) -> (vec Message) query;
+  getUserPointHistory: (user: principal) -> (vec PointRecord) query;
+  getUserPoints: (user: principal) -> (nat) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  givePoints: (user: principal, points: nat, reason: PointReason, remark:
+   text) -> (nat);
+  markCoachReadForUser: (user: principal) -> ();
+  markMessagesAsRead: () -> ();
+  recordActivity: () -> ();
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  sendMessageToCoach: (message: text, messageType: MessageType, blobId:
+   opt text) -> ();
+  sendMessageToUser: (user: principal, message: text, messageType:
+   MessageType, blobId: opt text) -> ();
+}

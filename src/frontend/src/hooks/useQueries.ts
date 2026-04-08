@@ -1,8 +1,13 @@
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Booking, Message, PointRecord, UserProfile } from "../backend";
-import { PointReason } from "../backend";
-import type { MessageType } from "../backend";
+import type {
+  Booking,
+  Message,
+  MessageType,
+  PointReason,
+  PointRecord,
+  UserProfile,
+} from "../types";
 import { useActor } from "./useActor";
 
 export function useGetCallerUserProfile() {
@@ -520,4 +525,4 @@ export function useRecordActivity() {
   });
 }
 
-export { PointReason };
+export { PointReason } from "../types";

@@ -9,17 +9,10 @@ import Array "mo:core/Array";
 import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import Order "mo:core/Order";
+import Migration "migration";
 
-import MixinAuthorization "authorization/MixinAuthorization";
-import MixinStorage "blob-storage/Mixin";
-import AccessControl "authorization/access-control";
-
-
-
+(with migration = Migration.run)
 actor {
-  let accessControlState = AccessControl.initState();
-  include MixinAuthorization(accessControlState);
-  include MixinStorage();
 
   // TYPE DEFINITIONS ----------------------------------------------------------
 
@@ -170,10 +163,7 @@ actor {
     profileStore.get(user);
   };
 
-  public query ({ caller }) func getAllProfiles() : async [UserProfile] {
-    if (not (AccessControl.isAdmin(accessControlState, caller))) {
-      Runtime.trap("Unauthorized: Only admins can fetch all profiles");
-    };
+  public query func getAllProfiles() : async [UserProfile] {
     profileStore.values().toArray();
   };
 

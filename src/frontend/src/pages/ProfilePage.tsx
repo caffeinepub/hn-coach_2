@@ -7,13 +7,13 @@ import { Loader2, Save, User } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
 import { Footer } from "../components/Footer";
 import { NavBar } from "../components/NavBar";
 import {
   useGetCallerUserProfile,
   useSaveUserProfile,
 } from "../hooks/useQueries";
+import type { UserProfile } from "../types";
 
 export function ProfilePage() {
   const navigate = useNavigate();

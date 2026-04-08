@@ -12,8 +12,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, Save, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { UserProfile } from "../backend";
 import { useActor } from "../hooks/useActor";
+import type { UserProfile } from "../types";
 
 interface NameModalProps {
   open: boolean;

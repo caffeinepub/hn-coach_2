@@ -4,9 +4,15 @@
  */
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Booking, Message, PointRecord, UserProfile } from "../backend";
-import { MessageType, PointReason } from "../backend";
-import type { backendInterface } from "../backend";
+import type {
+  Booking,
+  Message,
+  MessageType,
+  PointReason,
+  PointRecord,
+  UserProfile,
+} from "../types";
+import type { backendInterface } from "../types";
 
 export function useAdminGetAllUsers(actor: backendInterface | null) {
   return useQuery<Principal[]>({
@@ -237,4 +243,4 @@ export function useAdminGivePoints(actor: backendInterface | null) {
   });
 }
 
-export { MessageType, PointReason };
+export { MessageType, PointReason } from "../types";
